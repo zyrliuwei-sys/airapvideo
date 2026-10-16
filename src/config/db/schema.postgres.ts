@@ -707,3 +707,27 @@ export const event = table(
 
 export type Event = typeof event.$inferSelect;
 export type NewEvent = typeof event.$inferInsert;
+
+// ─── Historical traffic ──────────────────────────────────────────────────────
+// Daily browser visits imported from Cloudflare Web Analytics (sampled RUM)
+// by scripts/sync-traffic.ts. Covers the days before the event table existed
+// and stays as a cross-check for it. Days are cut at UTC+8.
+// dim: 'total' | 'referer' | 'country' | 'path'; value is '' for 'total'.
+
+export const trafficDaily = table(
+  'traffic_daily',
+  {
+    // `${day}|${dim}|${value}` so a re-import overwrites the same row.
+    id: text('id').primaryKey(),
+    day: text('day').notNull(),
+    dim: text('dim').notNull(),
+    value: text('value').notNull().default(''),
+    visits: integer('visits').notNull().default(0),
+    pageViews: integer('page_views').notNull().default(0),
+    updatedAt: timestamp('updated_at').defaultNow().notNull(),
+  },
+  (t) => [index('idx_traffic_daily_dim_day').on(t.dim, t.day)]
+);
+
+export type TrafficDaily = typeof trafficDaily.$inferSelect;
+export type NewTrafficDaily = typeof trafficDaily.$inferInsert;

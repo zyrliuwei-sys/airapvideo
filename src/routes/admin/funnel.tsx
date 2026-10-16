@@ -72,7 +72,26 @@ type Dashboard = {
     payers: number;
     revenue: number;
   }[];
+  history: HistoryRow[];
+  trafficSyncedTo: string;
+  topReferers: TrafficShare[];
+  topCountries: TrafficShare[];
+  topPaths: TrafficShare[];
 };
+
+type HistoryRow = {
+  day: string;
+  visits: number;
+  pageViews: number;
+  previews: number;
+  signups: number;
+  checkoutUsers: number;
+  payers: number;
+  orders: number;
+  revenue: number;
+};
+
+type TrafficShare = { value: string; visits: number; pageViews: number };
 
 const STEPS: StepKey[] = [
   'visit',
@@ -95,7 +114,7 @@ const stepLabel = (step: StepKey) =>
     paid: m['admin.funnel.step.paid'](),
   })[step];
 
-const RANGES = ['1', '7', '14', '30'];
+const RANGES = ['1', '7', '14', '30', '60'];
 const CN_TRAFFIC = 'CN,HK';
 
 const usd = (cents: number) =>
@@ -243,6 +262,156 @@ function FunnelTable({
   );
 }
 
+const num = (n: number) => n.toLocaleString('en-US');
+
+/** Cloudflare visits next to business-table counts, one row per day. */
+function HistoryTable({
+  rows,
+  syncedTo,
+}: {
+  rows: HistoryRow[];
+  syncedTo: string;
+}) {
+  // Page views lead: Web Analytics "visits" are a coarse sampled estimate
+  // at this traffic level, so no rate is computed from them.
+  const cols: { label: string; value: (r: HistoryRow) => string }[] = [
+    {
+      label: m['admin.funnel.history.page_views'](),
+      value: (r) => num(r.pageViews),
+    },
+    { label: m['admin.funnel.history.visits'](), value: (r) => num(r.visits) },
+    {
+      label: m['admin.funnel.history.previews'](),
+      value: (r) => num(r.previews),
+    },
+    {
+      label: m['admin.funnel.history.signups'](),
+      value: (r) => num(r.signups),
+    },
+    {
+      label: m['admin.funnel.history.checkout'](),
+      value: (r) => num(r.checkoutUsers),
+    },
+    { label: m['admin.funnel.step.paid'](), value: (r) => num(r.payers) },
+    { label: m['admin.funnel.col.revenue'](), value: (r) => usd(r.revenue) },
+    {
+      label: m['admin.funnel.history.signup_to_checkout'](),
+      value: (r) => pct(r.checkoutUsers, r.signups),
+    },
+    {
+      label: m['admin.funnel.history.signup_to_paid'](),
+      value: (r) => pct(r.payers, r.signups),
+    },
+    {
+      label: m['admin.funnel.history.rev_per_signup'](),
+      value: (r) => (r.signups > 0 ? usd(r.revenue / r.signups) : '—'),
+    },
+  ];
+  const total = rows.reduce(
+    (t, r) => ({
+      ...t,
+      visits: t.visits + r.visits,
+      pageViews: t.pageViews + r.pageViews,
+      previews: t.previews + r.previews,
+      signups: t.signups + r.signups,
+      checkoutUsers: t.checkoutUsers + r.checkoutUsers,
+      payers: t.payers + r.payers,
+      orders: t.orders + r.orders,
+      revenue: t.revenue + r.revenue,
+    }),
+    {
+      day: m['admin.funnel.history.total'](),
+      visits: 0,
+      pageViews: 0,
+      previews: 0,
+      signups: 0,
+      checkoutUsers: 0,
+      payers: 0,
+      orders: 0,
+      revenue: 0,
+    } as HistoryRow
+  );
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-base">
+          {m['admin.funnel.section.history']()}
+        </CardTitle>
+        <p className="text-muted-foreground text-xs">
+          {syncedTo
+            ? m['admin.funnel.history.synced']({ day: syncedTo })
+            : m['admin.funnel.history.not_synced']()}
+        </p>
+      </CardHeader>
+      <CardContent className="overflow-x-auto">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>{m['admin.funnel.col.day']()}</TableHead>
+              {cols.map((c) => (
+                <TableHead key={c.label} className="text-right">
+                  {c.label}
+                </TableHead>
+              ))}
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {[total, ...rows].map((r, i) => (
+              <TableRow key={r.day} className={cn(i === 0 && 'font-semibold')}>
+                <TableCell className="whitespace-nowrap">{r.day}</TableCell>
+                {cols.map((c) => (
+                  <TableCell key={c.label} className="text-right tabular-nums">
+                    {c.value(r)}
+                  </TableCell>
+                ))}
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </CardContent>
+    </Card>
+  );
+}
+
+function ShareCard({
+  title,
+  rows,
+  metric,
+}: {
+  title: string;
+  rows: TrafficShare[];
+  metric: 'visits' | 'pageViews';
+}) {
+  const total = rows.reduce((t, r) => t + r[metric], 0);
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-base">{title}</CardTitle>
+      </CardHeader>
+      <CardContent>
+        {rows.length === 0 ? (
+          <p className="text-muted-foreground text-sm">
+            {m['admin.funnel.empty']()}
+          </p>
+        ) : (
+          <ul className="space-y-1.5 text-sm">
+            {rows.map((r) => (
+              <li key={r.value} className="flex justify-between gap-3">
+                <span className="truncate">
+                  {r.value || m['admin.funnel.history.direct']()}
+                </span>
+                <span className="text-muted-foreground shrink-0 tabular-nums">
+                  {num(r[metric])} · {pct(r[metric], total)}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
 function FunnelPage() {
   const [days, setDays] = useState('7');
   const [excludeCn, setExcludeCn] = useState(false);
@@ -346,6 +515,25 @@ function FunnelPage() {
               title={m['admin.funnel.card.unpaid']()}
               value={data.unpaidCheckout24h}
               hint={m['admin.funnel.card.unpaid_hint']()}
+            />
+          </div>
+
+          <HistoryTable rows={data.history} syncedTo={data.trafficSyncedTo} />
+          <div className="grid gap-4 lg:grid-cols-3">
+            <ShareCard
+              title={m['admin.funnel.history.top_referers']()}
+              rows={data.topReferers}
+              metric="visits"
+            />
+            <ShareCard
+              title={m['admin.funnel.history.top_countries']()}
+              rows={data.topCountries}
+              metric="visits"
+            />
+            <ShareCard
+              title={m['admin.funnel.history.top_paths']()}
+              rows={data.topPaths}
+              metric="pageViews"
             />
           </div>
 
@@ -456,6 +644,8 @@ function FunnelPage() {
             <p>{m['admin.funnel.footnote.provider']()}</p>
             <p>{m['admin.funnel.footnote.build']()}</p>
             <p>{m['admin.funnel.footnote.compare']()}</p>
+            <p>{m['admin.funnel.footnote.history']()}</p>
+            <p>{m['admin.funnel.footnote.history_referrer']()}</p>
             <p>
               {m['admin.funnel.footnote.excluded']({
                 ids: data.testUserIds.join(', '),
