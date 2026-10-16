@@ -1,6 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router';
 
 import { getAllConfigs } from '@/modules/config/service';
+import { recordPaymentSuccess } from '@/modules/events/service';
 import { handlePaymentCallback } from '@/modules/payment/service';
 
 /**
@@ -38,6 +39,12 @@ async function GET({ request }: { request: Request }) {
   try {
     if (orderNo) {
       await handlePaymentCallback(orderNo);
+      // Ties the paying visitor (cookie) to the order. Revenue on the
+      // dashboard comes from the order table, so webhook-only payments
+      // still count.
+      await recordPaymentSuccess(request, orderNo).catch((e) =>
+        console.error('payment event error:', e)
+      );
     }
   } catch (error: any) {
     console.error('payment callback error:', error);

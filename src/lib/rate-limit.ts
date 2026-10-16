@@ -74,3 +74,28 @@ export function enforceMinIntervalRateLimit(
   store.set(key, now);
   return null;
 }
+
+type WindowStore = Map<string, { start: number; count: number }>;
+
+declare global {
+  var __windowRateLimitStore: WindowStore | undefined;
+}
+
+/**
+ * Fixed-window counter: true while `key` has made fewer than `limit` calls
+ * in the current `windowMs`. Per-isolate memory, so a soft limit only.
+ */
+export function allowInWindow(key: string, limit: number, windowMs: number) {
+  const store = (globalThis.__windowRateLimitStore ??= new Map());
+  const now = Date.now();
+  if (store.size > 5000) {
+    for (const [k, v] of store) if (now - v.start >= windowMs) store.delete(k);
+  }
+  const entry = store.get(key);
+  if (!entry || now - entry.start >= windowMs) {
+    store.set(key, { start: now, count: 1 });
+    return true;
+  }
+  entry.count += 1;
+  return entry.count <= limit;
+}

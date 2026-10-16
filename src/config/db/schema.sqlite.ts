@@ -730,3 +730,46 @@ export const hotelPreview = table(
 
 export type HotelPreview = typeof hotelPreview.$inferSelect;
 export type NewHotelPreview = typeof hotelPreview.$inferInsert;
+
+// ─── Funnel events ───────────────────────────────────────────────────────────
+// First-party funnel log (home view → upload → generate → paywall → plan →
+// checkout → paid). One row per event; dashboards count DISTINCT visitor_id
+// per step. First-touch source/country are pinned per visitor by cookie, so
+// every row of a visitor carries the same attribution.
+
+export const event = table(
+  'event',
+  {
+    id: text('id').primaryKey(),
+    // hl_did cookie (anonymous device id, shared with hotel_preview.device_id).
+    visitorId: text('visitor_id').notNull(),
+    userId: text('user_id'),
+    event: text('event').notNull(),
+    // First-touch attribution: chatgpt / google / bing / direct / <host> …
+    firstSource: text('first_source').notNull().default(''),
+    firstReferrer: text('first_referrer').notNull().default(''),
+    // utm_source/utm_medium/utm_campaign of the first landing, "/"-joined.
+    firstUtm: text('first_utm').notNull().default(''),
+    // cf-ipcountry at the visitor's first event.
+    firstCountry: text('first_country').notNull().default(''),
+    // Git commit of the bundle that sent the event (client or server).
+    build: text('build').notNull().default(''),
+    experiment: text('experiment').notNull().default(''),
+    paymentProvider: text('payment_provider'),
+    productId: text('product_id'),
+    path: text('path'),
+    // Small JSON blob for extras (order_no, amount, …).
+    props: text('props'),
+    createdAt: integer('created_at', { mode: 'timestamp_ms' })
+      .default(sqliteNowMs)
+      .notNull(),
+  },
+  (t) => [
+    index('idx_event_created').on(t.createdAt, t.event),
+    index('idx_event_visitor').on(t.visitorId, t.createdAt),
+    index('idx_event_user').on(t.userId, t.createdAt),
+  ]
+);
+
+export type Event = typeof event.$inferSelect;
+export type NewEvent = typeof event.$inferInsert;

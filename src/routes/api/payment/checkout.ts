@@ -3,6 +3,7 @@ import { createFileRoute } from '@tanstack/react-router';
 import { getAuth } from '@/core/auth';
 import { getPricingProduct } from '@/config/pricing';
 import { getAllConfigs } from '@/modules/config/service';
+import { recordServerEvent } from '@/modules/events/service';
 import { createCheckout } from '@/modules/payment/service';
 import { enforceMinIntervalRateLimit } from '@/lib/rate-limit';
 import { respData, respErr } from '@/lib/resp';
@@ -106,6 +107,15 @@ async function POST({ request }: { request: Request }) {
       },
       provider: payment_provider,
     });
+
+    // Funnel: "sent to the payment page", with the provider actually used.
+    await recordServerEvent(request, {
+      event: 'hl_checkout_start',
+      userId: session.user.id,
+      paymentProvider: checkout.provider,
+      productId: product.productId,
+      props: { amount: chargeAmount, currency: product.currency },
+    }).catch((e) => console.error('checkout event error:', e));
 
     return respData({ checkout_url: checkout.checkoutInfo.checkoutUrl });
   } catch (error: any) {

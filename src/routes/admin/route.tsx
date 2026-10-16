@@ -8,6 +8,7 @@ import {
   Radar,
   Settings,
   Shield,
+  TrendingUp,
 } from 'lucide-react';
 
 import { envConfigs } from '@/config';
@@ -30,6 +31,12 @@ function AdminLayout() {
       href: '/admin',
       label: m['admin.nav.overview'](),
       icon: LayoutDashboard,
+      group,
+    },
+    {
+      href: '/admin/funnel',
+      label: m['admin.nav.funnel'](),
+      icon: TrendingUp,
       group,
     },
     {

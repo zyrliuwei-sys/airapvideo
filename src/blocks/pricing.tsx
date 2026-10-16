@@ -268,6 +268,8 @@ export function Pricing({
   function startCheckout(plan: PricingPlan, provider?: PaymentProvider) {
     track('begin_checkout', {
       plan: plan.productId ?? '',
+      product_id: plan.productId ?? '',
+      payment_provider: provider ?? '',
       value: (plan.priceInCents ?? 0) / 100,
     });
     setLoadingProvider(provider ?? null);
@@ -275,6 +277,12 @@ export function Pricing({
   }
 
   async function handleCheckout(plan: PricingPlan) {
+    track('hl_plan_select', {
+      product_id: plan.productId ?? '',
+      value: (plan.priceInCents ?? 0) / 100,
+      surface: variant,
+      signed_in: session?.user ? 1 : 0,
+    });
     if (!session?.user) {
       const callbackUrl = encodeURIComponent(currentPathWithQuery('/pricing'));
       router.push(`/sign-in?callbackUrl=${callbackUrl}`);

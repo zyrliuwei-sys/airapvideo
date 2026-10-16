@@ -1,3 +1,4 @@
+import { execSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { tanstackStart } from '@tanstack/react-start/plugin/vite';
@@ -50,10 +51,28 @@ function workersDbProvider(): string {
 const workersDb = isCloudflareBuild ? workersDbProvider() : '';
 const keepPostgres = workersDb === 'postgresql' || workersDb === 'postgres';
 
+// Git commit compiled into both bundles; every funnel event carries it so the
+// admin funnel can be split by release. CI env vars first (no .git there).
+function gitCommit(): string {
+  const fromEnv =
+    process.env.WORKERS_CI_COMMIT_SHA ||
+    process.env.CF_PAGES_COMMIT_SHA ||
+    process.env.GITHUB_SHA;
+  if (fromEnv) return fromEnv.slice(0, 7);
+  try {
+    const sha = execSync('git rev-parse --short=7 HEAD', { encoding: 'utf8' });
+    const dirty = execSync('git status --porcelain', { encoding: 'utf8' });
+    return sha.trim() + (dirty.trim() ? '-dirty' : '');
+  } catch {
+    return 'unknown';
+  }
+}
+
 export default defineConfig({
   define: {
     // Versions the homepage HTML edge cache (src/server.ts) per build.
     __BUILD_ID__: JSON.stringify(Date.now().toString(36)),
+    __GIT_COMMIT__: JSON.stringify(gitCommit()),
   },
   server: {
     port: 3000,

@@ -303,6 +303,7 @@ function PhotoInput({
             e.target.value = '';
             return;
           }
+          if (file) track('hl_photo_upload');
           onFile(file);
         }}
       />
@@ -354,6 +355,9 @@ export function HotelLobbyPage() {
       );
     }
   }, []);
+  // Funnel step 1 (first-party event table + GA). The page HTML is
+  // edge-cached, so the view is counted from the browser.
+  useEffect(() => track('hl_home_view'), []);
   // Arriving at /#create (e.g. straight after sign-in / sign-up): the browser's
   // own anchor jump fires before images settle the layout, so scroll again.
   useEffect(() => {
@@ -516,6 +520,7 @@ export function HotelLobbyPage() {
     );
   };
   const startGenerate = () => {
+    track('hl_generate_click', { signed_in: user ? 1 : 0 });
     // New visitors must choose a paid plan before any generation request is
     // submitted. Existing signed-in users with enough credits can still use
     // their balance directly.
