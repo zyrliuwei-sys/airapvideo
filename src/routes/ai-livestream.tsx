@@ -3,7 +3,7 @@ import { createFileRoute } from '@tanstack/react-router';
 import { envConfigs } from '@/config';
 import { m } from '@/paraglide/messages.js';
 import { getLocale, localizeUrl } from '@/paraglide/runtime.js';
-import { HotelLobbyPage } from '@/blocks/hotel-lobby';
+import { RapVideoPage } from '@/blocks/rap-video';
 
 export const Route = createFileRoute('/ai-livestream')({
   loader: () => ({ locale: getLocale() }),
@@ -20,7 +20,7 @@ export const Route = createFileRoute('/ai-livestream')({
         { property: 'og:type', content: 'website' },
         {
           property: 'og:image',
-          content: `${envConfigs.app_url}/imgs/generated/hotel-lobby-duet.png`,
+          content: `${envConfigs.app_url}/videos/examples/booth-duo.jpg`,
         },
         { name: 'twitter:card', content: 'summary_large_image' },
       ],
@@ -32,5 +32,5 @@ export const Route = createFileRoute('/ai-livestream')({
       ],
     };
   },
-  component: HotelLobbyPage,
+  component: RapVideoPage,
 });

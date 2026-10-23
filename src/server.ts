@@ -31,7 +31,7 @@ function ensureCloudflareEnv(): Promise<void> {
 // that points at the previous build's assets. Query strings (utm_*, …) and
 // other paths always render fresh; admin settings show up within 5 minutes.
 declare const __BUILD_ID__: string;
-const HTML_CACHE_PATHS = new Set(['/', '/zh', '/zh/']);
+const HTML_CACHE_PATHS = new Set(['/']);
 const HTML_CACHE_SECONDS = 300;
 
 function htmlEdgeCache(req: Request): Cache | undefined {

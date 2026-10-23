@@ -172,19 +172,17 @@ async function sendWelcomeEmail(
       configs.initial_credits_enabled === 'true'
         ? parseInt(configs.initial_credits_amount) || 0
         : 0;
-    const zh = (user.locale || '').startsWith('zh');
 
     const result = await emailCtx.provider.sendEmail({
       to: user.email,
-      subject: zh ? `欢迎来到 ${appName}` : `Welcome to ${appName}`,
+      subject: `Welcome to ${appName}`,
       react: WelcomeEmail({
         appName,
         logoUrl: getEmailLogoUrl(configs, appUrl),
-        url: `${appUrl}${zh ? '/zh' : ''}/#create`,
-        videosUrl: `${appUrl}${zh ? '/zh' : ''}/settings/videos`,
+        url: `${appUrl}/#create`,
+        videosUrl: `${appUrl}/settings/videos`,
         name: user.name || undefined,
         credits,
-        locale: zh ? 'zh' : 'en',
       }),
     });
     if (!result.success) {

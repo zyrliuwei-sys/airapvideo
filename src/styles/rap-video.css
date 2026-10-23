@@ -1,0 +1,1090 @@
+/*
+ * AiRapVideo homepage. Builds on the brand tokens in brand.css
+ * ("stage night": booth charcoal, paper, booth orange, brass).
+ * Signature: the hero is a 9:16 frame with karaoke-style burned-in captions.
+ */
+.rv-page {
+  min-height: 100dvh;
+  overflow: clip;
+  background: var(--br-bg);
+  color: var(--br-paper);
+  font-family: var(--br-body);
+}
+.rv-page * {
+  box-sizing: border-box;
+}
+.rv-page :focus-visible {
+  outline: 2px solid var(--br-orange);
+  outline-offset: 3px;
+}
+.rv-page h1,
+.rv-page h2 {
+  margin: 0;
+  font-family: var(--br-display);
+  font-weight: 600;
+  letter-spacing: -0.025em;
+  text-wrap: balance;
+}
+.rv-eyebrow {
+  margin: 0 0 18px;
+  color: var(--br-brass);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+.rv-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.rv-head {
+  max-width: 720px;
+  margin: 0 0 48px;
+}
+.rv-head h2 {
+  font-size: clamp(28px, 3.4vw, 44px);
+  line-height: 1.1;
+}
+.rv-head p:not(.rv-eyebrow) {
+  margin: 16px 0 0;
+  color: var(--br-smoke);
+  font-size: 17px;
+  line-height: 1.65;
+}
+
+/* ─── Hero ────────────────────────────────────────────────────────────── */
+.rv-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(0, 0.75fr);
+  align-items: center;
+  gap: 48px;
+  min-height: min(760px, calc(100dvh - 68px));
+  padding: 64px var(--br-gutter) 72px;
+  background:
+    radial-gradient(
+      70% 90% at 78% 40%,
+      rgba(240, 138, 60, 0.2),
+      transparent 60%
+    ),
+    var(--br-bg);
+}
+.rv-hero-copy {
+  animation: rv-rise 0.8s ease-out both;
+}
+.rv-hero h1 {
+  max-width: 700px;
+  font-size: clamp(36px, 4.2vw, 58px);
+  line-height: 1.05;
+}
+.rv-hero-sub {
+  max-width: 500px;
+  margin: 24px 0 34px;
+  color: var(--br-smoke);
+  font-size: 18px;
+  line-height: 1.6;
+}
+.rv-hero-stage {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  animation: rv-rise 0.9s 0.12s ease-out both;
+}
+.rv-frame {
+  position: relative;
+  width: min(340px, 72vw);
+  aspect-ratio: 9 / 16;
+  overflow: hidden;
+  border: 1px solid var(--br-line-strong);
+  border-radius: 18px;
+  background: #4a2818;
+  box-shadow:
+    0 40px 80px -30px rgba(0, 0, 0, 0.7),
+    0 0 0 8px rgba(244, 237, 227, 0.04);
+}
+.rv-frame video {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.rv-frame::after {
+  position: absolute;
+  inset: 55% 0 0;
+  content: '';
+  background: linear-gradient(transparent, rgba(20, 13, 10, 0.85));
+}
+/* Burned-in caption: each word lights up in turn, like a lyric video. */
+.rv-caption {
+  position: absolute;
+  z-index: 1;
+  right: 18px;
+  bottom: 22px;
+  left: 18px;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0 0.3em;
+  margin: 0;
+  text-align: center;
+  font-family: var(--br-display);
+  font-size: 19px;
+  font-weight: 600;
+  line-height: 1.3;
+}
+.rv-caption span {
+  color: rgba(244, 237, 227, 0.38);
+  animation: rv-word 0.25s ease-out forwards;
+}
+.rv-inputs {
+  position: absolute;
+  z-index: 2;
+  top: 50%;
+  left: max(0px, calc(50% - min(340px, 72vw) / 2 - 92px));
+  display: grid;
+  gap: 14px;
+  transform: translateY(-50%);
+}
+.rv-inputs figure {
+  margin: 0;
+  padding: 6px 6px 8px;
+  border: 1px solid var(--br-line-strong);
+  border-radius: var(--br-radius-sm);
+  background: var(--br-surface);
+  box-shadow: 0 18px 40px -18px rgba(0, 0, 0, 0.7);
+}
+.rv-inputs figcaption {
+  margin-top: 6px;
+  color: var(--br-smoke);
+  text-align: center;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+.rv-crop {
+  display: block;
+  width: 84px;
+  height: 84px;
+  border-radius: 6px;
+  background: #4a2818 url('/videos/examples/booth-duo.jpg') no-repeat;
+  background-size: 260% auto;
+}
+.rv-crop-a {
+  background-position: 15% 31%;
+}
+.rv-crop-b {
+  background-position: 100% 36%;
+}
+
+/* ─── Facts strip ─────────────────────────────────────────────────────── */
+.rv-facts {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  border-top: 1px solid var(--br-line);
+  border-bottom: 1px solid var(--br-line);
+  padding: 0 var(--br-gutter);
+}
+.rv-facts div {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 28px 24px 28px 0;
+}
+.rv-facts div + div {
+  padding-left: 24px;
+  border-left: 1px solid var(--br-line);
+}
+.rv-facts strong {
+  font-family: var(--br-display);
+  font-size: 20px;
+  font-weight: 600;
+}
+.rv-facts span {
+  color: var(--br-smoke);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+/* ─── Sections ────────────────────────────────────────────────────────── */
+.rv-create,
+.rv-guide,
+.rv-features,
+.rv-how,
+.rv-ideas,
+.rv-tips,
+.rv-faq {
+  scroll-margin-top: 68px;
+  padding: 112px var(--br-gutter);
+}
+
+/* ─── Generator ───────────────────────────────────────────────────────── */
+.rv-studio {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 380px);
+  gap: 48px;
+  align-items: start;
+  padding: 40px;
+  border: 1px solid var(--br-line);
+  border-radius: 20px;
+  background: var(--br-surface);
+}
+.rv-step {
+  margin: 0 0 16px;
+}
+.rv-step:not(:first-child) {
+  margin-top: 36px;
+  padding-top: 32px;
+  border-top: 1px solid var(--br-line);
+}
+.rv-step h3 {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 700;
+}
+.rv-step p {
+  margin: 4px 0 0;
+  color: var(--br-smoke);
+  font-size: 14px;
+}
+.rv-upload-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+.rv-upload {
+  position: relative;
+  display: flex;
+  height: 200px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  overflow: hidden;
+  border: 1px dashed var(--br-line-strong);
+  border-radius: var(--br-radius);
+  background: var(--br-bg);
+  color: var(--br-orange);
+  cursor: pointer;
+  transition:
+    border-color 0.2s ease,
+    background 0.2s ease;
+}
+.rv-upload:hover,
+.rv-upload:focus-within {
+  border-color: var(--br-orange);
+  background: #211913;
+}
+.rv-upload span,
+.rv-upload small {
+  position: relative;
+  z-index: 1;
+}
+.rv-upload span {
+  color: var(--br-paper);
+  font-size: 15px;
+  font-weight: 700;
+}
+.rv-upload small {
+  color: var(--br-smoke);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+.rv-upload-preview {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0.55;
+}
+.rv-option-groups {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+.rv-field-label {
+  margin: 0 0 10px;
+  color: var(--br-smoke);
+  font-size: 13px;
+  font-weight: 700;
+}
+.rv-options {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.rv-option {
+  display: flex;
+  height: 88px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 10px 8px 12px;
+  border: 1px solid var(--br-line-strong);
+  border-radius: var(--br-radius-sm);
+  background: var(--br-bg);
+  color: var(--br-smoke);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition:
+    border-color 0.2s ease,
+    color 0.2s ease;
+}
+.rv-option[aria-checked='true'] {
+  border-color: var(--br-orange);
+  color: var(--br-paper);
+}
+.rv-option:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+.rv-option-shape {
+  display: block;
+  height: 36px;
+  max-width: 60px;
+  border: 1.5px solid currentColor;
+  border-radius: 4px;
+}
+.rv-option[aria-checked='true'] .rv-option-shape {
+  border-color: var(--br-orange);
+  background: rgba(240, 138, 60, 0.25);
+}
+.rv-option-seconds {
+  font-family: var(--br-display);
+  font-size: 22px;
+  line-height: 36px;
+}
+.rv-option[aria-checked='true'] .rv-option-seconds {
+  color: var(--br-orange);
+}
+.rv-create textarea {
+  display: block;
+  width: 100%;
+  min-height: 100px;
+  resize: vertical;
+  padding: 14px 16px;
+  border: 1px solid var(--br-line-strong);
+  border-radius: var(--br-radius-sm);
+  outline: none;
+  background: var(--br-bg);
+  color: var(--br-paper);
+  font:
+    15px/1.55 var(--br-body),
+    sans-serif;
+}
+.rv-create textarea:focus {
+  border-color: var(--br-orange);
+}
+.rv-create textarea::placeholder {
+  color: #8f7f71;
+}
+.rv-consent {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin: 18px 0 24px;
+  color: var(--br-smoke);
+  font-size: 13px;
+  line-height: 1.55;
+}
+.rv-consent input {
+  width: 16px;
+  height: 16px;
+  margin-top: 2px;
+  accent-color: var(--br-orange);
+}
+.rv-hint {
+  margin: 16px 0 0;
+  color: var(--br-smoke);
+  font-size: 13px;
+  line-height: 1.55;
+}
+.rv-hint a {
+  color: var(--br-orange);
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.rv-preview {
+  position: sticky;
+  top: 92px;
+}
+/* Every new scene and video is 9:16: the frame matches, stills fill it edge
+   to edge. Videos are shown whole (contain) so an older one isn't cropped. */
+.rv-preview-media {
+  aspect-ratio: 9 / 16;
+  overflow: hidden;
+  border: 1px solid var(--br-line);
+  border-radius: 14px;
+  background: #4a2818;
+}
+.rv-preview-media picture {
+  display: contents;
+}
+.rv-preview-media img,
+.rv-preview-media video,
+.rv-preview-media canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.rv-preview-media video {
+  object-fit: contain;
+  background: #120c09;
+}
+.rv-preview-empty {
+  display: flex;
+  height: 100%;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  border: 1px dashed var(--br-line-strong);
+  border-radius: 14px;
+  background:
+    radial-gradient(
+      80% 60% at 50% 40%,
+      rgba(240, 138, 60, 0.16),
+      transparent 70%
+    ),
+    var(--br-bg);
+  color: var(--br-smoke);
+  font-size: 14px;
+  font-weight: 700;
+}
+.rv-preview-empty svg {
+  color: var(--br-orange);
+}
+.rv-preview-title {
+  margin: 16px 0 4px;
+  font-size: 14px;
+  font-weight: 700;
+}
+.rv-preview > p:last-child {
+  margin: 0;
+  color: var(--br-smoke);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+/* ─── Guide (long-form) ───────────────────────────────────────────────── */
+.rv-guide {
+  display: grid;
+  grid-template-columns: minmax(240px, 0.75fr) minmax(0, 1.25fr);
+  gap: 72px;
+  align-items: start;
+  border-top: 1px solid var(--br-line);
+}
+.rv-guide-aside {
+  position: sticky;
+  top: 100px;
+}
+.rv-guide-aside h2 {
+  font-size: clamp(26px, 2.6vw, 34px);
+  line-height: 1.15;
+}
+.rv-guide-aside nav {
+  display: flex;
+  flex-direction: column;
+  margin-top: 32px;
+  border-left: 1px solid var(--br-line);
+}
+.rv-guide-aside nav a {
+  margin-left: -1px;
+  padding: 9px 0 9px 18px;
+  border-left: 1px solid transparent;
+  color: var(--br-smoke);
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 600;
+  transition:
+    color 0.2s ease,
+    border-color 0.2s ease;
+}
+.rv-guide-aside nav a:hover {
+  border-color: var(--br-orange);
+  color: var(--br-paper);
+}
+.rv-guide-body {
+  max-width: 680px;
+}
+.rv-guide-body h3 {
+  scroll-margin-top: 96px;
+  margin: 48px 0 14px;
+  font-family: var(--br-display);
+  font-size: 21px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: 1.3;
+}
+.rv-guide-body h3:first-child {
+  margin-top: 0;
+}
+.rv-guide-body p {
+  margin: 0 0 18px;
+  color: rgba(244, 237, 227, 0.8);
+  font-size: 17px;
+  line-height: 1.8;
+}
+
+/* ─── Features bento ──────────────────────────────────────────────────── */
+.rv-features {
+  border-top: 1px solid var(--br-line);
+}
+.rv-bento {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 16px;
+}
+.rv-cell {
+  display: flex;
+  grid-column: span 2;
+  flex-direction: column;
+  padding: 28px;
+  border: 1px solid var(--br-line);
+  border-radius: 16px;
+  background: var(--br-surface);
+}
+.rv-cell svg {
+  flex: none;
+  margin-bottom: auto;
+  color: var(--br-orange);
+}
+.rv-cell h3 {
+  margin: 28px 0 8px;
+  font-size: 18px;
+  font-weight: 700;
+}
+.rv-cell p {
+  margin: 0;
+  color: var(--br-smoke);
+  font-size: 15px;
+  line-height: 1.6;
+}
+.rv-cell-wide {
+  grid-column: span 4;
+}
+.rv-cell-half {
+  grid-column: span 3;
+}
+/* Video shown whole at its native 3:4 next to the copy: never cropped. */
+.rv-cell-image {
+  display: grid;
+  grid-template-columns: minmax(0, 0.8fr) minmax(0, 1fr);
+  align-items: end;
+  gap: 28px;
+  overflow: hidden;
+  padding: 16px 28px 16px 16px;
+}
+.rv-cell-media {
+  aspect-ratio: 3 / 4;
+  overflow: hidden;
+  border-radius: 10px;
+  background: #120c09;
+}
+.rv-cell-media video {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.rv-cell-image > div:last-child {
+  padding-bottom: 12px;
+}
+.rv-cell-accent {
+  justify-content: flex-end;
+  min-height: 220px;
+  border-color: transparent;
+  background:
+    radial-gradient(
+      90% 120% at 100% 0%,
+      rgba(255, 196, 140, 0.35),
+      transparent 60%
+    ),
+    var(--br-orange);
+  color: #1d1612;
+}
+.rv-cell-accent svg {
+  color: #1d1612;
+}
+.rv-cell-accent h3 {
+  font-family: var(--br-display);
+  font-size: 22px;
+  font-weight: 600;
+}
+.rv-cell-accent p {
+  max-width: 460px;
+  color: rgba(29, 22, 18, 0.78);
+}
+
+/* ─── How it works (timeline) ─────────────────────────────────────────── */
+.rv-how {
+  border-top: 1px solid var(--br-line);
+}
+.rv-timeline {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 40px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.rv-timeline::before {
+  position: absolute;
+  top: 26px;
+  right: 0;
+  left: 0;
+  height: 1px;
+  content: '';
+  background: linear-gradient(
+    90deg,
+    var(--br-orange),
+    var(--br-line-strong) 70%
+  );
+}
+.rv-timeline li {
+  position: relative;
+}
+.rv-timeline svg {
+  box-sizing: content-box;
+  padding: 14px;
+  border: 1px solid var(--br-line-strong);
+  border-radius: 50%;
+  background: var(--br-bg);
+  color: var(--br-orange);
+}
+.rv-timeline h3 {
+  margin: 22px 0 8px;
+  font-family: var(--br-display);
+  font-size: 22px;
+  font-weight: 600;
+}
+.rv-timeline p {
+  max-width: 320px;
+  margin: 0;
+  color: var(--br-smoke);
+  font-size: 15px;
+  line-height: 1.6;
+}
+
+/* ─── Ideas (media + interactive list) ────────────────────────────────── */
+.rv-ideas {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
+  gap: 64px;
+  align-items: center;
+  border-top: 1px solid var(--br-line);
+}
+.rv-ideas-media {
+  position: relative;
+  width: min(100%, 460px);
+  justify-self: center;
+  aspect-ratio: 3 / 4;
+  overflow: hidden;
+  border-radius: 16px;
+  background: #4a2818;
+}
+.rv-ideas-media video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0;
+  transition: opacity 0.5s ease;
+}
+.rv-ideas-media video.rv-idea-on {
+  opacity: 1;
+}
+.rv-ideas-copy h2 {
+  font-size: clamp(28px, 3.4vw, 44px);
+  line-height: 1.1;
+}
+.rv-ideas-lede {
+  margin: 14px 0 28px;
+  color: var(--br-smoke);
+  font-size: 17px;
+  line-height: 1.6;
+}
+.rv-ideas-copy ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.rv-ideas-copy button {
+  display: block;
+  width: 100%;
+  padding: 18px 0 18px 20px;
+  border: 0;
+  border-left: 2px solid var(--br-line);
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+  transition: border-color 0.25s ease;
+}
+.rv-ideas-copy button[aria-pressed='true'] {
+  border-left-color: var(--br-orange);
+}
+.rv-ideas-copy strong {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 18px;
+  font-weight: 700;
+}
+.rv-ideas-copy button span {
+  color: var(--br-smoke);
+  font-size: 15px;
+  line-height: 1.55;
+}
+.rv-ideas-copy button[aria-pressed='false'] strong {
+  color: var(--br-smoke);
+}
+
+/* ─── Photo tips (comparison) ─────────────────────────────────────────── */
+.rv-tips {
+  border-top: 1px solid var(--br-line);
+}
+.rv-tips-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  border: 1px solid var(--br-line);
+  border-radius: 16px;
+  overflow: hidden;
+}
+.rv-tips-grid > div {
+  padding: 32px 36px;
+}
+.rv-tips-grid > div + div {
+  border-left: 1px solid var(--br-line);
+  background: rgba(0, 0, 0, 0.12);
+}
+.rv-tips-grid h3 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 18px;
+  font-size: 17px;
+  font-weight: 700;
+}
+.rv-tips-grid > div:first-child h3 svg {
+  color: #9fcf8a;
+}
+.rv-tips-grid > div + div h3 svg {
+  color: #e98a78;
+}
+.rv-tips-grid ul {
+  margin: 0;
+  padding-left: 18px;
+  color: var(--br-smoke);
+}
+.rv-tips-grid li {
+  margin: 0 0 10px;
+  font-size: 15px;
+  line-height: 1.55;
+}
+
+/* ─── Pricing (shared block, re-skinned in place) ─────────────────────── */
+.rv-pricing #pricing {
+  scroll-margin-top: 68px;
+}
+.rv-pricing #pricing h2 {
+  font-family: var(--br-display);
+  font-weight: 600;
+  letter-spacing: -0.025em;
+}
+
+/* ─── FAQ ─────────────────────────────────────────────────────────────── */
+.rv-faq {
+  border-top: 1px solid var(--br-line);
+}
+.rv-faq .rv-head {
+  margin-inline: auto;
+  text-align: center;
+}
+.rv-faq-list {
+  max-width: 820px;
+  margin: 0 auto;
+  border-top: 1px solid var(--br-line);
+}
+.rv-faq-list details {
+  border-bottom: 1px solid var(--br-line);
+}
+.rv-faq-list summary {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 20px;
+  align-items: center;
+  gap: 16px;
+  padding: 22px 4px;
+  list-style: none;
+  font-size: 17px;
+  font-weight: 700;
+  line-height: 1.4;
+  cursor: pointer;
+}
+.rv-faq-list summary::-webkit-details-marker {
+  display: none;
+}
+.rv-faq-list summary::after {
+  justify-self: end;
+  color: var(--br-orange);
+  content: '+';
+  font-size: 22px;
+  font-weight: 400;
+  line-height: 1;
+}
+.rv-faq-list details[open] summary::after {
+  content: '−';
+}
+.rv-faq-list p {
+  margin: 0;
+  padding: 0 48px 24px 4px;
+  color: var(--br-smoke);
+  font-size: 16px;
+  line-height: 1.7;
+}
+
+/* ─── Closing band ────────────────────────────────────────────────────── */
+.rv-closing {
+  padding: 120px var(--br-gutter);
+  border-top: 1px solid var(--br-line);
+  background:
+    radial-gradient(
+      60% 100% at 50% 100%,
+      rgba(240, 138, 60, 0.22),
+      transparent 65%
+    ),
+    var(--br-bg);
+  text-align: center;
+}
+.rv-closing h2 {
+  max-width: 760px;
+  margin-inline: auto;
+  font-size: clamp(32px, 4.4vw, 56px);
+  line-height: 1.08;
+}
+.rv-closing p {
+  margin: 16px 0 32px;
+  color: var(--br-smoke);
+  font-size: 18px;
+}
+
+.rv-examples {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(160px, 1fr);
+  gap: 12px;
+  overflow-x: auto;
+  padding: 24px var(--br-gutter);
+}
+.rv-examples video {
+  width: 100%;
+  aspect-ratio: 9 / 16;
+  object-fit: cover;
+  border-radius: var(--br-radius);
+}
+
+@keyframes rv-rise {
+  from {
+    transform: translateY(16px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+@keyframes rv-word {
+  to {
+    color: var(--br-paper);
+  }
+}
+
+/* ─── Responsive ──────────────────────────────────────────────────────── */
+@media (max-width: 1080px) {
+  .rv-studio {
+    grid-template-columns: minmax(0, 1fr) 300px;
+    gap: 32px;
+    padding: 28px;
+  }
+  .rv-option-groups {
+    grid-template-columns: 1fr;
+  }
+}
+@media (max-width: 900px) {
+  .rv-hero {
+    grid-template-columns: 1fr;
+    min-height: 0;
+    gap: 48px;
+    padding-top: 48px;
+  }
+  .rv-facts {
+    grid-template-columns: 1fr 1fr;
+  }
+  .rv-facts div:nth-child(3) {
+    padding-left: 0;
+    border-left: 0;
+  }
+  .rv-facts div:nth-child(n + 3) {
+    border-top: 1px solid var(--br-line);
+  }
+  .rv-studio {
+    grid-template-columns: 1fr;
+  }
+  .rv-preview {
+    position: static;
+    max-width: 380px;
+  }
+  .rv-guide,
+  .rv-ideas {
+    grid-template-columns: 1fr;
+    gap: 40px;
+  }
+  .rv-guide-aside {
+    position: static;
+  }
+  .rv-bento {
+    grid-template-columns: 1fr 1fr;
+  }
+  .rv-cell,
+  .rv-cell-half {
+    grid-column: span 1;
+  }
+  .rv-cell-wide {
+    grid-column: span 2;
+  }
+}
+@media (max-width: 640px) {
+  .rv-create,
+  .rv-guide,
+  .rv-features,
+  .rv-how,
+  .rv-ideas,
+  .rv-tips,
+  .rv-faq {
+    padding: 80px 16px;
+  }
+  .rv-hero {
+    padding: 40px 16px 56px;
+  }
+  .rv-hero-sub {
+    font-size: 16px;
+  }
+  .rv-actions .br-btn {
+    flex: 1 1 100%;
+  }
+  .rv-inputs {
+    left: 0;
+  }
+  .rv-crop {
+    width: 64px;
+    height: 64px;
+  }
+  .rv-facts {
+    padding: 0 16px;
+  }
+  .rv-facts div {
+    padding: 22px 12px 22px 0;
+  }
+  .rv-facts div + div {
+    padding-left: 12px;
+  }
+  .rv-facts strong {
+    font-size: 17px;
+  }
+  .rv-studio {
+    padding: 18px;
+  }
+  .rv-upload {
+    height: 160px;
+  }
+  .rv-bento {
+    grid-template-columns: 1fr;
+  }
+  .rv-cell,
+  .rv-cell-half,
+  .rv-cell-wide {
+    grid-column: span 1;
+  }
+  .rv-cell-image {
+    grid-template-columns: 1fr;
+    padding: 12px 12px 16px;
+  }
+  .rv-cell-image > div:last-child {
+    padding: 0 12px;
+  }
+  .rv-timeline {
+    grid-template-columns: 1fr;
+    gap: 32px;
+  }
+  .rv-timeline::before {
+    top: 0;
+    right: auto;
+    bottom: 0;
+    left: 26px;
+    width: 1px;
+    height: auto;
+  }
+  .rv-timeline li {
+    padding-left: 76px;
+  }
+  .rv-timeline svg {
+    position: absolute;
+    top: 0;
+    left: 0;
+  }
+  .rv-timeline h3 {
+    margin-top: 10px;
+  }
+  .rv-tips-grid {
+    grid-template-columns: 1fr;
+  }
+  .rv-tips-grid > div {
+    padding: 26px 22px;
+  }
+  .rv-tips-grid > div + div {
+    border-top: 1px solid var(--br-line);
+    border-left: 0;
+  }
+  .rv-faq-list p {
+    padding-right: 8px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .rv-hero-copy,
+  .rv-hero-stage {
+    animation: none;
+  }
+  .rv-caption span {
+    animation: none;
+    color: var(--br-paper);
+  }
+  .rv-page * {
+    scroll-behavior: auto !important;
+    transition: none !important;
+  }
+}
+
+/* Chinese: the display face has no CJK glyphs; keep headings heavy. */
+:lang(zh) .rv-page h1,
+:lang(zh) .rv-page h2,
+:lang(zh) .rv-guide-body h3,
+:lang(zh) .rv-timeline h3,
+:lang(zh) .rv-cell-accent h3 {
+  font-weight: 700;
+  letter-spacing: 0;
+}
+:lang(zh) .rv-hero h1 {
+  line-height: 1.2;
+}
+:lang(zh) .rv-caption {
+  gap: 0 0.12em;
+}

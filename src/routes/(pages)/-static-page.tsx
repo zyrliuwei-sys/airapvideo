@@ -1,6 +1,8 @@
 import { lazy, Suspense, type ComponentType } from 'react';
 import { notFound, useLoaderData } from '@tanstack/react-router';
+import { ArrowLeft } from 'lucide-react';
 
+import { Link } from '@/core/i18n/navigation';
 import { envConfigs } from '@/config';
 import { m } from '@/paraglide/messages.js';
 import {
@@ -93,21 +95,26 @@ function StaticPage() {
   const Content = pageBody(pageKey(slug, locale)!);
 
   return (
-    <article>
-      <header className="border-border mb-6 border-b pb-5">
-        <h1 className="text-foreground text-3xl font-semibold tracking-tight md:text-4xl">
-          {meta.title}
-        </h1>
-        <p className="text-muted-foreground mt-2 text-sm">{meta.description}</p>
-        <p className="text-muted-foreground mt-2 text-xs">
-          {m['common.pages.last_updated']()}: {meta.updated_at}
-        </p>
+    <main>
+      <header className="br-page-hero">
+        <div>
+          <Link href="/" className="br-back">
+            <ArrowLeft className="size-4" />
+            {m['common.pages.back_to_home']()}
+          </Link>
+          {/* meta.title carries the "| Brand" suffix for <title>; drop it here. */}
+          <h1>{meta.title.split(' | ')[0]}</h1>
+          <p>{meta.description}</p>
+          <p className="br-page-meta">
+            {m['common.pages.last_updated']()}: {meta.updated_at}
+          </p>
+        </div>
       </header>
-      <div className="text-foreground/90 text-[15px] leading-7">
+      <article className="br-article">
         <Suspense fallback={null}>
           <Content />
         </Suspense>
-      </div>
-    </article>
+      </article>
+    </main>
   );
 }

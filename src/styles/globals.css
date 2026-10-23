@@ -4,8 +4,8 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  --font-sans: 'DM Sans Variable', 'PingFang SC', sans-serif;
-  --font-serif-display: 'Bebas Neue', 'Arial Narrow', sans-serif;
+  --font-sans: 'Manrope Variable', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  --font-serif-display: 'Unbounded Variable', 'PingFang SC', sans-serif;
 }
 
 @theme inline {
@@ -57,41 +57,43 @@
 }
 
 @layer base {
+  /* AiRapVideo "stage night": warm booth charcoal, paper text, one booth
+     orange accent, brass for hairline detail. Committed dark (single theme). */
   :root,
   .dark {
-    --background: oklch(0.15 0.009 42);
-    --foreground: oklch(0.94 0.013 78);
-    --card: oklch(0.2 0.012 44);
-    --card-foreground: oklch(0.94 0.013 78);
-    --popover: oklch(0.2 0.012 44);
-    --popover-foreground: oklch(0.94 0.013 78);
-    --primary: oklch(0.73 0.09 57);
-    --primary-foreground: oklch(0.15 0.009 42);
-    --secondary: oklch(0.25 0.013 43);
-    --secondary-foreground: oklch(0.94 0.013 78);
-    --muted: oklch(0.25 0.013 43);
-    --muted-foreground: oklch(0.71 0.021 67);
-    --accent: oklch(0.3 0.02 44);
-    --accent-foreground: oklch(0.96 0.012 78);
-    --destructive: oklch(0.62 0.19 25);
+    --background: oklch(0.165 0.011 48);
+    --foreground: oklch(0.95 0.013 80);
+    --card: oklch(0.205 0.013 48);
+    --card-foreground: oklch(0.95 0.013 80);
+    --popover: oklch(0.215 0.014 48);
+    --popover-foreground: oklch(0.95 0.013 80);
+    --primary: oklch(0.73 0.155 54);
+    --primary-foreground: oklch(0.17 0.012 48);
+    --secondary: oklch(0.245 0.015 48);
+    --secondary-foreground: oklch(0.95 0.013 80);
+    --muted: oklch(0.245 0.015 48);
+    --muted-foreground: oklch(0.74 0.024 68);
+    --accent: oklch(0.27 0.02 52);
+    --accent-foreground: oklch(0.96 0.012 80);
+    --destructive: oklch(0.64 0.19 27);
     --destructive-foreground: oklch(0.98 0 0);
-    --border: oklch(0.34 0.019 44);
-    --input: oklch(0.34 0.019 44);
-    --ring: oklch(0.73 0.09 57);
-    --chart-1: oklch(0.73 0.09 57);
-    --chart-2: oklch(0.61 0.08 38);
-    --chart-3: oklch(0.78 0.03 79);
-    --chart-4: oklch(0.55 0.035 170);
-    --chart-5: oklch(0.63 0.055 26);
-    --radius: 0.25rem;
-    --sidebar: oklch(0.17 0.01 42);
-    --sidebar-foreground: oklch(0.94 0.013 78);
-    --sidebar-primary: oklch(0.73 0.09 57);
-    --sidebar-primary-foreground: oklch(0.15 0.009 42);
-    --sidebar-accent: oklch(0.27 0.016 44);
-    --sidebar-accent-foreground: oklch(0.94 0.013 78);
-    --sidebar-border: oklch(0.34 0.019 44);
-    --sidebar-ring: oklch(0.73 0.09 57);
+    --border: oklch(0.32 0.017 50);
+    --input: oklch(0.34 0.018 50);
+    --ring: oklch(0.73 0.155 54);
+    --chart-1: oklch(0.73 0.155 54);
+    --chart-2: oklch(0.8 0.085 82);
+    --chart-3: oklch(0.6 0.06 40);
+    --chart-4: oklch(0.62 0.07 175);
+    --chart-5: oklch(0.66 0.13 25);
+    --radius: 0.75rem;
+    --sidebar: oklch(0.185 0.012 48);
+    --sidebar-foreground: oklch(0.95 0.013 80);
+    --sidebar-primary: oklch(0.73 0.155 54);
+    --sidebar-primary-foreground: oklch(0.17 0.012 48);
+    --sidebar-accent: oklch(0.255 0.017 50);
+    --sidebar-accent-foreground: oklch(0.95 0.013 80);
+    --sidebar-border: oklch(0.32 0.017 50);
+    --sidebar-ring: oklch(0.73 0.155 54);
   }
 }
 

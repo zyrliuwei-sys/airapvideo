@@ -186,7 +186,7 @@ export function getSettingGroups(): SettingGroup[] {
     },
     {
       name: 'hotel_lobby',
-      title: 'Hotel Lobby duet',
+      title: 'Rap video generator',
       description:
         'Two photos → GPT Image 2 scene → DreamActor motion transfer (uses the Fal key)',
       tab: 'ai',
@@ -513,7 +513,7 @@ export function getSettings(): Setting[] {
       name: 'creem_test_amount',
       title: 'Test amount (cents)',
       type: 'number',
-      placeholder: '留空使用实际金额，填 1 则支付 $0.01',
+      placeholder: 'Leave blank for the actual amount; enter 1 to charge $0.01',
       group: 'creem',
       tab: 'payment',
     },
@@ -625,7 +625,7 @@ export function getSettings(): Setting[] {
       name: 'paypal_test_amount',
       title: 'Test amount (cents)',
       type: 'number',
-      placeholder: '留空使用实际金额，填 1 则支付 $0.01',
+      placeholder: 'Leave blank for the actual amount; enter 1 to charge $0.01',
       group: 'paypal',
       tab: 'payment',
     },
@@ -672,9 +672,10 @@ export function getSettings(): Setting[] {
     },
     {
       name: 'alipay_test_amount',
-      title: 'Test amount (分)',
+      title: 'Test amount (minor units)',
       type: 'number',
-      placeholder: '留空使用实际金额，填 1 则支付 ¥0.01',
+      placeholder:
+        'Leave blank for the actual amount; enter 1 to charge CNY 0.01',
       group: 'alipay',
       tab: 'payment',
     },
@@ -697,7 +698,7 @@ export function getSettings(): Setting[] {
     },
     {
       name: 'wechat_mch_id',
-      title: 'Merchant ID (商户号)',
+      title: 'Merchant ID ',
       type: 'text',
       placeholder: '1900000001',
       group: 'wechat',
@@ -705,7 +706,7 @@ export function getSettings(): Setting[] {
     },
     {
       name: 'wechat_api_v3_key',
-      title: 'APIv3 Key (32位密钥)',
+      title: 'APIv3 Key (32-byte key)',
       type: 'password',
       placeholder: '32 chars',
       group: 'wechat',
@@ -737,9 +738,10 @@ export function getSettings(): Setting[] {
     },
     {
       name: 'wechat_test_amount',
-      title: 'Test amount (分)',
+      title: 'Test amount (minor units)',
       type: 'number',
-      placeholder: '留空使用实际金额，填 1 则支付 ¥0.01',
+      placeholder:
+        'Leave blank for the actual amount; enter 1 to charge CNY 0.01',
       group: 'wechat',
       tab: 'payment',
     },

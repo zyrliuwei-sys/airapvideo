@@ -2,25 +2,23 @@ import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   ArrowRight,
+  AudioLines,
   Check,
-  Copy,
+  Clapperboard,
+  Crop,
   Download,
   Loader2,
+  Lock,
+  RotateCcw,
+  Smartphone,
   Upload,
+  Users,
   X,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { useSession } from '@/core/auth/client';
 import { Link } from '@/core/i18n/navigation';
-import { envConfigs } from '@/config';
-import {
-  HERO_DESKTOP_SIZES,
-  HERO_DESKTOP_WIDTHS,
-  HERO_MOBILE_MEDIA,
-  HERO_MOBILE_WIDTHS,
-  optSrcSet,
-} from '@/config/hotel-lobby-images';
 import {
   DEFAULT_DUET_LENGTH,
   DUET_LENGTHS,
@@ -38,67 +36,90 @@ import { track } from '@/lib/track';
 import { m } from '@/paraglide/messages.js';
 import { localizeHref } from '@/paraglide/runtime.js';
 import { useUserPermissions } from '@/hooks/use-user-permissions';
+import { Footer } from '@/blocks/footer';
+import { Header } from '@/blocks/header';
 import { Pricing } from '@/blocks/pricing';
-import { FooterBadgeList } from '@/components/footer-badge-list';
 
-import '@/styles/hotel-lobby.css';
+import '@/styles/rap-video.css';
 
-// Popups load on demand: the user menu only exists for signed-in visitors and
-// the paywall is only needed when a visitor starts the paid flow — keep their
-// dialog/menu code out of the homepage's initial JS.
-const SiteUserMenu = lazy(() =>
-  import('@/components/site-user-menu').then((mod) => ({
-    default: mod.SiteUserMenu,
-  }))
-);
+// The paywall is only needed when a visitor starts the paid flow: keep its
+// dialog code out of the homepage's initial JS.
 const PaywallDialog = lazy(() => import('@/blocks/paywall-dialog'));
 
-const heroImage = '/imgs/generated/hotel-lobby-duet.png';
-const mobileHeroImage = '/imgs/generated/duet-hero-mobile.jpg';
-const previewImage = '/imgs/generated/duet-scene-preview.jpg';
-const friendsImage = '/imgs/generated/duet-friends.jpg';
-const siblingsImage = '/imgs/generated/duet-siblings.jpg';
-const coupleImage = '/imgs/generated/duet-couple.jpg';
+// Example clips (muted loops) with their JPEG posters.
+const clip = (name: string) => ({
+  src: `/videos/examples/${name}.mp4`,
+  poster: `/videos/examples/${name}.jpg`,
+});
+const boothClip = clip('booth-duo');
+const studioClip = clip('studio-chemistry');
+const sessionClip = clip('studio-session');
+const frontRowClip = clip('front-row');
+const birthdayClip = clip('birthday-duo');
 
-const IDEA_SIZES = '(max-width: 600px) 100vw, (max-width: 1020px) 50vw, 420px';
+const IDEAS = [
+  {
+    name: 'friends',
+    ...sessionClip,
+    title: m['rap.ideas.friends.title'],
+    text: m['rap.ideas.friends.text'],
+  },
+  {
+    name: 'siblings',
+    ...frontRowClip,
+    title: m['rap.ideas.battle.title'],
+    text: m['rap.ideas.battle.text'],
+  },
+  {
+    name: 'couple',
+    ...birthdayClip,
+    title: m['rap.ideas.couples.title'],
+    text: m['rap.ideas.couples.text'],
+  },
+];
 
-/** <picture> with AVIF → WebP → original fallback; lazy unless `eager`. */
-function OptImage({
-  name,
-  widths,
-  sizes,
+/** Muted looping clip that only plays while it is on screen. */
+function LoopVideo({
   src,
+  poster,
+  label,
+  className,
   eager,
-  ...img
 }: {
-  name: string;
-  widths: number[];
-  sizes: string;
   src: string;
+  poster: string;
+  label?: string;
+  className?: string;
   eager?: boolean;
-  alt: string;
-  width: number;
-  height: number;
 }) {
+  const ref = useRef<HTMLVideoElement>(null);
+  useEffect(() => {
+    const video = ref.current;
+    if (!video) return;
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) video.play().catch(() => {});
+        else video.pause();
+      },
+      { rootMargin: '200px' }
+    );
+    observer.observe(video);
+    return () => observer.disconnect();
+  }, []);
   return (
-    <picture>
-      <source
-        type="image/avif"
-        srcSet={optSrcSet(name, widths, 'avif')}
-        sizes={sizes}
-      />
-      <source
-        type="image/webp"
-        srcSet={optSrcSet(name, widths, 'webp')}
-        sizes={sizes}
-      />
-      <img
-        src={src}
-        loading={eager ? undefined : 'lazy'}
-        decoding="async"
-        {...img}
-      />
-    </picture>
+    <video
+      ref={ref}
+      src={src}
+      poster={poster}
+      className={className}
+      aria-label={label}
+      aria-hidden={label ? undefined : true}
+      muted
+      loop
+      playsInline
+      preload={eager ? 'auto' : 'none'}
+    />
   );
 }
 
@@ -291,7 +312,7 @@ function PhotoInput({
     return () => URL.revokeObjectURL(url);
   }, [file]);
   return (
-    <label className="hl-upload">
+    <label className="rv-upload">
       <input
         type="file"
         accept="image/png,image/jpeg,image/webp"
@@ -308,7 +329,7 @@ function PhotoInput({
         }}
       />
       {preview ? (
-        <img src={preview} alt={label} className="hl-upload-preview" />
+        <img src={preview} alt={label} className="rv-upload-preview" />
       ) : (
         <Upload size={24} strokeWidth={1.5} />
       )}
@@ -318,7 +339,7 @@ function PhotoInput({
   );
 }
 
-export function HotelLobbyPage() {
+export function RapVideoPage() {
   const [photoA, setPhotoA] = useState<File | null>(null);
   const [photoB, setPhotoB] = useState<File | null>(null);
   const [direction, setDirection] = useState('');
@@ -327,7 +348,7 @@ export function HotelLobbyPage() {
   const [previewId, setPreviewId] = useState<string>();
   const [taskId, setTaskId] = useState<string>();
   const [consent, setConsent] = useState(false);
-  const [menu, setMenu] = useState(false);
+  const [activeIdea, setActiveIdea] = useState(0);
   const { data: session } = useSession();
   const user = session?.user;
   const canGenerate = consent && !!photoA && !!photoB;
@@ -593,118 +614,65 @@ export function HotelLobbyPage() {
   const credits = price?.toLocaleString('en-US') ?? '…';
 
   return (
-    <div className="hotel-page">
-      <header className="hl-header">
-        <Link href="/" className="hl-brand">
-          <img
-            src={envConfigs.app_logo}
-            alt={m['hotel.logo_alt']()}
-            width={512}
-            height={512}
-            className="hl-brand-mark"
-          />
-          <span>{envConfigs.app_name}</span>
-        </Link>
-        <nav
-          className={menu ? 'hl-nav hl-nav-open' : 'hl-nav'}
-          aria-label={m['hotel.nav_label']()}
-        >
-          <a href="#create" onClick={() => setMenu(false)}>
-            {m['hotel.nav.create']()}
-          </a>
-          <a href="#how" onClick={() => setMenu(false)}>
-            {m['hotel.nav.how']()}
-          </a>
-          <a href="#ideas" onClick={() => setMenu(false)}>
-            {m['hotel.nav.ideas']()}
-          </a>
-          <a href="#faq" onClick={() => setMenu(false)}>
-            {m['hotel.nav.faq']()}
-          </a>
-          <a href="#pricing" onClick={() => setMenu(false)}>
-            {m['hotel.nav.pricing']()}
-          </a>
-        </nav>
-        <div className="hl-header-actions">
-          {user ? (
-            <Suspense fallback={<span className="block size-9" />}>
-              <SiteUserMenu
-                name={user.name || user.email}
-                email={user.email}
-                image={user.image}
-              />
-            </Suspense>
-          ) : (
-            <Link className="hl-nav-cta" href="/sign-in">
-              {m['common.sign.sign_in_title']()} <ArrowRight size={16} />
-            </Link>
-          )}
-          <button
-            className="hl-menu"
-            onClick={() => setMenu(!menu)}
-            aria-label={m['hotel.nav_label']()}
-          >
-            {menu ? <X /> : <span>☰</span>}
-          </button>
-        </div>
-      </header>
+    <div className="rv-page">
+      <Header />
 
       <main>
-        <section className="hl-hero">
-          <div className="hl-hero-frame">
-            {/* Preloaded in routes/index.tsx — keep the srcsets in sync. */}
-            <picture>
-              <source
-                media={HERO_MOBILE_MEDIA}
-                type="image/avif"
-                srcSet={optSrcSet('hero-mobile', HERO_MOBILE_WIDTHS, 'avif')}
-                sizes="100vw"
-              />
-              <source
-                media={HERO_MOBILE_MEDIA}
-                type="image/webp"
-                srcSet={optSrcSet('hero-mobile', HERO_MOBILE_WIDTHS, 'webp')}
-                sizes="100vw"
-              />
-              <source media={HERO_MOBILE_MEDIA} srcSet={mobileHeroImage} />
-              <source
-                type="image/avif"
-                srcSet={optSrcSet('hero-desktop', HERO_DESKTOP_WIDTHS, 'avif')}
-                sizes={HERO_DESKTOP_SIZES}
-              />
-              <source
-                type="image/webp"
-                srcSet={optSrcSet('hero-desktop', HERO_DESKTOP_WIDTHS, 'webp')}
-                sizes={HERO_DESKTOP_SIZES}
-              />
-              <img
-                src={heroImage}
-                alt={m['hotel.hero.image_alt']()}
-                width={1672}
-                height={941}
-                fetchPriority="high"
-              />
-            </picture>
+        <section className="rv-hero">
+          <div className="rv-hero-copy">
+            <p className="rv-eyebrow">{m['rap.hero.eyebrow']()}</p>
+            <h1>{m['rap.hero.title']()}</h1>
+            <p className="rv-hero-sub">{m['rap.hero.subtitle']()}</p>
+            <div className="rv-actions">
+              <a href="#create" className="br-btn">
+                {m['hotel.hero.cta']()} <ArrowRight size={18} />
+              </a>
+              <a href="#how" className="br-btn br-btn-ghost">
+                {m['rap.hero.secondary']()}
+              </a>
+            </div>
           </div>
-          <div className="hl-hero-copy">
-            <p className="hl-kicker">{m['hotel.hero.eyebrow']()}</p>
-            <h1>{m['hotel.hero.title']()}</h1>
-            <p className="hl-tagline">{m['hotel.hero.tagline']()}</p>
-            <p className="hl-subtitle">{m['hotel.hero.subtitle']()}</p>
-            <a href="#create" className="hl-button">
-              {m['hotel.hero.cta']()} <ArrowRight size={18} />
-            </a>
-            <ul className="hl-trust">
-              <li>{m['hotel.hero.trust_free']()}</li>
-              <li>{m['hotel.hero.trust_time']()}</li>
-              <li>{m['hotel.hero.trust_spec']()}</li>
-              <li>{m['hotel.hero.trust_refund']()}</li>
-            </ul>
+          <div className="rv-hero-stage">
+            <div className="rv-inputs" aria-hidden="true">
+              <figure>
+                <span className="rv-crop rv-crop-a" />
+                <figcaption>{m['rap.hero.photo_one']()}</figcaption>
+              </figure>
+              <figure>
+                <span className="rv-crop rv-crop-b" />
+                <figcaption>{m['rap.hero.photo_two']()}</figcaption>
+              </figure>
+            </div>
+            <div className="rv-frame">
+              {/* Poster preloaded in routes/index.tsx: keep in sync. */}
+              <LoopVideo
+                {...boothClip}
+                label={m['hotel.hero.image_alt']()}
+                eager
+              />
+              <LyricCaption />
+            </div>
           </div>
         </section>
 
+        <section className="rv-facts" aria-label={m['rap.facts.label']()}>
+          {(
+            [
+              [m['rap.facts.format.value'], m['rap.facts.format.text']],
+              [m['rap.facts.length.value'], m['rap.facts.length.text']],
+              [m['rap.facts.time.value'], m['rap.facts.time.text']],
+              [m['rap.facts.refund.value'], m['rap.facts.refund.text']],
+            ] as const
+          ).map(([value, text]) => (
+            <div key={value()}>
+              <strong>{value()}</strong>
+              <span>{text()}</span>
+            </div>
+          ))}
+        </section>
+
         {exampleVideos.length > 0 && (
-          <section className="hl-examples">
+          <section className="rv-examples">
             {exampleVideos.map((video) => (
               <video
                 key={video.src}
@@ -720,32 +688,18 @@ export function HotelLobbyPage() {
           </section>
         )}
 
-        <section className="hl-explainer" aria-labelledby="filter-heading">
-          <div className="hl-section-intro">
-            <p className="hl-kicker">{m['hotel.explainer.eyebrow']()}</p>
-            <h2 id="filter-heading">{m['hotel.explainer.title']()}</h2>
-          </div>
-          <div className="hl-prose">
-            <p>{m['hotel.explainer.origin']()}</p>
-            <p>{m['hotel.explainer.one']()}</p>
-            <p>{m['hotel.explainer.two']()}</p>
-            <p>{m['hotel.explainer.three']()}</p>
-          </div>
-        </section>
-
-        <section id="create" className="hl-create">
-          <div className="hl-section-intro">
-            <p className="hl-kicker">{m['hotel.create.eyebrow']()}</p>
+        <section id="create" className="rv-create">
+          <div className="rv-head">
             <h2>{m['hotel.create.title']()}</h2>
             <p>{m['hotel.create.description']()}</p>
           </div>
-          <div className="hl-create-grid">
-            <div className="hl-create-form">
-              <div className="hl-form-top">
-                <span className="hl-step">{m['hotel.create.photos']()}</span>
-                <span>{m['hotel.create.format']()}</span>
+          <div className="rv-studio">
+            <div className="rv-studio-form">
+              <div className="rv-step">
+                <h3>{m['hotel.create.photos']()}</h3>
+                <p>{m['hotel.create.format']()}</p>
               </div>
-              <div className="hl-upload-grid">
+              <div className="rv-upload-grid">
                 <PhotoInput
                   label={m['hotel.create.person_a']()}
                   side={m['hotel.create.left']()}
@@ -759,71 +713,90 @@ export function HotelLobbyPage() {
                   onFile={changeInput(setPhotoB)}
                 />
               </div>
-              <p className="hl-field-label" id="duet-size-label">
-                {m['hotel.create.size']()}
-              </p>
-              <div
-                className="hl-sizes"
-                role="radiogroup"
-                aria-labelledby="duet-size-label"
-              >
-                {OFFERED_DUET_SIZES.map((key) => (
-                  <button
-                    key={key}
-                    type="button"
-                    role="radio"
-                    aria-checked={size === key}
-                    className="hl-size"
-                    disabled={running}
-                    onClick={() => key !== size && changeInput(setSize)(key)}
-                  >
-                    <span
-                      className="hl-size-shape"
-                      style={{
-                        aspectRatio: `${DUET_SIZES[key].width} / ${DUET_SIZES[key].height}`,
-                      }}
-                    />
-                    <span>
-                      {key === 'full'
-                        ? m['hotel.create.shot_full']()
-                        : m['hotel.create.shot_classic']()}
-                    </span>
-                  </button>
-                ))}
+
+              <div className="rv-step">
+                <h3>{m['rap.create.step_shot']()}</h3>
+                <p>{m['rap.create.step_shot_hint']()}</p>
               </div>
-              <p className="hl-field-label" id="duet-length-label">
-                {m['hotel.create.length']()}
-              </p>
-              <div
-                className="hl-sizes"
-                role="radiogroup"
-                aria-labelledby="duet-length-label"
-              >
-                {(Object.keys(DUET_LENGTHS) as DuetLength[]).map((key) => (
-                  <button
-                    key={key}
-                    type="button"
-                    role="radio"
-                    aria-checked={length === key}
-                    className="hl-size"
-                    disabled={running}
-                    onClick={() => setLength(key)}
+              <div className="rv-option-groups">
+                <div>
+                  <p className="rv-field-label" id="duet-size-label">
+                    {m['hotel.create.size']()}
+                  </p>
+                  <div
+                    className="rv-options"
+                    role="radiogroup"
+                    aria-labelledby="duet-size-label"
                   >
-                    <span className="hl-length-seconds">
-                      {m['hotel.create.length_seconds']({ seconds: key })}
-                    </span>
-                    <span>
-                      {priceQuery.data?.lengths?.[key]?.toLocaleString(
-                        'en-US'
-                      ) ?? '…'}{' '}
-                      {m['hotel.create.length_credits']()}
-                    </span>
-                  </button>
-                ))}
+                    {OFFERED_DUET_SIZES.map((key) => (
+                      <button
+                        key={key}
+                        type="button"
+                        role="radio"
+                        aria-checked={size === key}
+                        className="rv-option"
+                        disabled={running}
+                        onClick={() =>
+                          key !== size && changeInput(setSize)(key)
+                        }
+                      >
+                        <span
+                          className="rv-option-shape"
+                          style={{
+                            aspectRatio: `${DUET_SIZES[key].width} / ${DUET_SIZES[key].height}`,
+                          }}
+                        />
+                        <span>
+                          {key === 'full'
+                            ? m['hotel.create.shot_full']()
+                            : m['hotel.create.shot_classic']()}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <p className="rv-field-label" id="duet-length-label">
+                    {m['hotel.create.length']()}
+                  </p>
+                  <div
+                    className="rv-options"
+                    role="radiogroup"
+                    aria-labelledby="duet-length-label"
+                  >
+                    {(Object.keys(DUET_LENGTHS) as DuetLength[]).map((key) => (
+                      <button
+                        key={key}
+                        type="button"
+                        role="radio"
+                        aria-checked={length === key}
+                        className="rv-option"
+                        disabled={running}
+                        onClick={() => setLength(key)}
+                      >
+                        <span className="rv-option-seconds">
+                          {m['hotel.create.length_seconds']({ seconds: key })}
+                        </span>
+                        <span>
+                          {priceQuery.data?.lengths?.[key]?.toLocaleString(
+                            'en-US'
+                          ) ?? '…'}{' '}
+                          {m['hotel.create.length_credits']()}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
               </div>
-              <label className="hl-field-label" htmlFor="direction">
-                {m['hotel.create.direction']()}
-              </label>
+
+              <div className="rv-step">
+                <h3>
+                  <label htmlFor="direction">
+                    {m['hotel.create.direction']()}
+                  </label>
+                </h3>
+                <p>{m['rap.create.step_note_hint']()}</p>
+              </div>
               <textarea
                 id="direction"
                 value={direction}
@@ -831,7 +804,7 @@ export function HotelLobbyPage() {
                 maxLength={400}
                 placeholder={m['hotel.create.placeholder']()}
               />
-              <label className="hl-consent">
+              <label className="rv-consent">
                 <input
                   type="checkbox"
                   checked={consent}
@@ -839,15 +812,15 @@ export function HotelLobbyPage() {
                 />
                 <span>{m['hotel.create.consent']()}</span>
               </label>
-              <div className="hl-form-actions">
+              <div className="rv-actions">
                 {task?.status === 'success' || task?.status === 'failed' ? (
-                  <button className="hl-button" type="button" onClick={reset}>
+                  <button className="br-btn" type="button" onClick={reset}>
                     {m['hotel.create.again']()} <ArrowRight size={17} />
                   </button>
                 ) : previewReady ? (
                   <>
                     <button
-                      className={`hl-button ${animate.isPending ? 'hl-disabled' : ''}`}
+                      className={`br-btn ${animate.isPending ? 'br-disabled' : ''}`}
                       type="button"
                       disabled={animate.isPending}
                       onClick={startAnimate}
@@ -861,7 +834,7 @@ export function HotelLobbyPage() {
                       {!animate.isPending && <ArrowRight size={17} />}
                     </button>
                     <button
-                      className="hl-outline"
+                      className="br-btn br-btn-ghost"
                       type="button"
                       onClick={reset}
                     >
@@ -870,7 +843,7 @@ export function HotelLobbyPage() {
                   </>
                 ) : (
                   <button
-                    className={`hl-button ${!canGenerate || running ? 'hl-disabled' : ''}`}
+                    className={`br-btn ${!canGenerate || running ? 'br-disabled' : ''}`}
                     type="button"
                     disabled={!canGenerate || running}
                     onClick={startGenerate}
@@ -883,25 +856,28 @@ export function HotelLobbyPage() {
                 {task?.videoUrl && (
                   <>
                     <a
-                      className="hl-outline"
+                      className="br-btn br-btn-ghost"
                       href={`/api/hotel-lobby/download?id=${task.id}`}
                       download
                     >
                       {m['hotel.create.download']()} <Download size={17} />
                     </a>
-                    <Link className="hl-outline" href="/settings/videos">
+                    <Link
+                      className="br-btn br-btn-ghost"
+                      href="/settings/videos"
+                    >
                       {m['hotel.create.my_videos']()}
                     </Link>
                   </>
                 )}
               </div>
               {price !== undefined && !previewReady && (
-                <p className="hl-hint">
+                <p className="rv-hint">
                   {m['hotel.create.cost']({ credits })}{' '}
                   <a href="#pricing">{m['hotel.create.buy_credits']()}</a>
                 </p>
               )}
-              <p className="hl-hint" role="status" aria-live="polite">
+              <p className="rv-hint" role="status" aria-live="polite">
                 {error
                   ? `${m['hotel.create.failed']()}: ${error}`
                   : task?.status === 'success'
@@ -921,8 +897,8 @@ export function HotelLobbyPage() {
                                 : m['hotel.create.hint']()}
               </p>
             </div>
-            <aside className="hl-preview">
-              <div className="hl-preview-media">
+            <aside className="rv-preview">
+              <div className="rv-preview-media">
                 {task?.videoUrl ? (
                   <video
                     src={task.videoUrl}
@@ -946,143 +922,181 @@ export function HotelLobbyPage() {
                     onError={forget}
                   />
                 ) : (
-                  <OptImage
-                    name="scene-preview"
-                    widths={[480, 768]}
-                    sizes="(max-width: 600px) 100vw, 480px"
-                    src={previewImage}
-                    alt={m['hotel.hero.image_alt']()}
-                    width={1024}
-                    height={1536}
-                  />
+                  <div className="rv-preview-empty">
+                    <Clapperboard size={28} />
+                    <span>{m['hotel.create.preview']()}</span>
+                  </div>
                 )}
               </div>
-              <div className="hl-preview-caption">
-                <span>{m['hotel.create.preview']()}</span>
-                <span>{m['hotel.create.duet']()}</span>
-              </div>
+              <p className="rv-preview-title">{m['hotel.create.preview']()}</p>
               <p>{m['hotel.create.preview_note']()}</p>
             </aside>
           </div>
         </section>
 
-        <section id="how" className="hl-how">
-          <div className="hl-section-intro">
-            <p className="hl-kicker">{m['hotel.how.eyebrow']()}</p>
-            <h2>{m['hotel.how.title']()}</h2>
+        <section id="guide" className="rv-guide">
+          <div className="rv-guide-aside">
+            <p className="rv-eyebrow">{m['rap.guide.eyebrow']()}</p>
+            <h2>{m['rap.guide.title']()}</h2>
+            <nav aria-label={m['rap.guide.toc']()}>
+              <a href="#what-is">{m['rap.guide.what.title']()}</a>
+              <a href="#how-works">{m['rap.guide.works.title']()}</a>
+              <a href="#make">{m['rap.guide.make.title']()}</a>
+              <a href="#why">{m['rap.guide.why.title']()}</a>
+              <a href="#best">{m['rap.guide.best.title']()}</a>
+            </nav>
           </div>
-          <div className="hl-how-grid">
-            <article>
-              <h3>{m['hotel.how.one.title']()}</h3>
-              <p>{m['hotel.how.one.text']()}</p>
+          <article className="rv-guide-body">
+            <h3 id="what-is">{m['rap.guide.what.title']()}</h3>
+            <p>{m['rap.guide.what.one']()}</p>
+            <p>{m['rap.guide.what.two']()}</p>
+            <h3 id="how-works">{m['rap.guide.works.title']()}</h3>
+            <p>{m['rap.guide.works.one']()}</p>
+            <p>{m['rap.guide.works.two']()}</p>
+            <h3 id="make">{m['rap.guide.make.title']()}</h3>
+            <p>{m['rap.guide.make.one']()}</p>
+            <h3 id="why">{m['rap.guide.why.title']()}</h3>
+            <p>{m['rap.guide.why.one']()}</p>
+            <h3 id="best">{m['rap.guide.best.title']()}</h3>
+            <p>{m['rap.guide.best.one']()}</p>
+          </article>
+        </section>
+
+        <section className="rv-features" aria-labelledby="features-heading">
+          <div className="rv-head">
+            <h2 id="features-heading">{m['rap.features.title']()}</h2>
+          </div>
+          <div className="rv-bento">
+            <article className="rv-cell rv-cell-wide rv-cell-image">
+              <div className="rv-cell-media">
+                <LoopVideo
+                  {...studioClip}
+                  label={m['rap.features.sync.alt']()}
+                />
+              </div>
+              <div>
+                <AudioLines size={22} />
+                <h3>{m['rap.features.sync.title']()}</h3>
+                <p>{m['rap.features.sync.text']()}</p>
+              </div>
             </article>
-            <article>
-              <h3>{m['hotel.how.two.title']()}</h3>
-              <p>{m['hotel.how.two.text']()}</p>
+            <article className="rv-cell">
+              <Users size={22} />
+              <h3>{m['rap.features.duo.title']()}</h3>
+              <p>{m['rap.features.duo.text']()}</p>
             </article>
-            <article>
-              <h3>{m['hotel.how.three.title']()}</h3>
-              <p>{m['hotel.how.three.text']()}</p>
+            <article className="rv-cell">
+              <Smartphone size={22} />
+              <h3>{m['rap.features.app.title']()}</h3>
+              <p>{m['rap.features.app.text']()}</p>
+            </article>
+            <article className="rv-cell rv-cell-wide rv-cell-accent">
+              <Clapperboard size={22} />
+              <h3>{m['rap.features.stage.title']()}</h3>
+              <p>{m['rap.features.stage.text']()}</p>
+            </article>
+            <article className="rv-cell rv-cell-half">
+              <RotateCcw size={22} />
+              <h3>{m['rap.features.refund.title']()}</h3>
+              <p>{m['rap.features.refund.text']()}</p>
+            </article>
+            <article className="rv-cell rv-cell-half">
+              <Lock size={22} />
+              <h3>{m['rap.features.privacy.title']()}</h3>
+              <p>{m['rap.features.privacy.text']()}</p>
             </article>
           </div>
         </section>
 
-        <section id="ideas" className="hl-ideas">
-          <div className="hl-section-intro">
-            <p className="hl-kicker">{m['hotel.ideas.eyebrow']()}</p>
-            <h2>{m['hotel.ideas.title']()}</h2>
-            <p>{m['hotel.ideas.description']()}</p>
+        <section id="how" className="rv-how">
+          <div className="rv-head">
+            <h2>{m['rap.how.title']()}</h2>
           </div>
-          <div className="hl-ideas-grid">
-            <article>
-              <div className="hl-idea-media">
-                <OptImage
-                  name="friends"
-                  widths={[640, 960]}
-                  sizes={IDEA_SIZES}
-                  src={friendsImage}
-                  alt={m['hotel.ideas.image_alt']()}
-                  width={1536}
-                  height={1024}
-                />
-              </div>
-              <h3>{m['hotel.ideas.friends.title']()}</h3>
-              <p>{m['hotel.ideas.friends.text']()}</p>
-            </article>
-            <article>
-              <div className="hl-idea-media">
-                <OptImage
-                  name="siblings"
-                  widths={[640, 960]}
-                  sizes={IDEA_SIZES}
-                  src={siblingsImage}
-                  alt={m['hotel.ideas.siblings.image_alt']()}
-                  width={1536}
-                  height={1024}
-                />
-              </div>
-              <h3>{m['hotel.ideas.siblings.title']()}</h3>
-              <p>{m['hotel.ideas.siblings.text']()}</p>
-            </article>
-            <article>
-              <div className="hl-idea-media">
-                <OptImage
-                  name="couple"
-                  widths={[640, 960]}
-                  sizes={IDEA_SIZES}
-                  src={coupleImage}
-                  alt={m['hotel.ideas.couples.image_alt']()}
-                  width={1536}
-                  height={1024}
-                />
-              </div>
-              <h3>{m['hotel.ideas.couples.title']()}</h3>
-              <p>{m['hotel.ideas.couples.text']()}</p>
-            </article>
+          <ol className="rv-timeline">
+            <li>
+              <Upload size={22} />
+              <h3>{m['rap.how.one.title']()}</h3>
+              <p>{m['rap.how.one.text']()}</p>
+            </li>
+            <li>
+              <Crop size={22} />
+              <h3>{m['rap.how.two.title']()}</h3>
+              <p>{m['rap.how.two.text']()}</p>
+            </li>
+            <li>
+              <Clapperboard size={22} />
+              <h3>{m['rap.how.three.title']()}</h3>
+              <p>{m['rap.how.three.text']()}</p>
+            </li>
+          </ol>
+        </section>
+
+        <section id="ideas" className="rv-ideas">
+          <div className="rv-ideas-media">
+            {IDEAS.map((idea, index) => (
+              <LoopVideo
+                key={idea.name}
+                src={idea.src}
+                poster={idea.poster}
+                label={idea.title()}
+                className={index === activeIdea ? 'rv-idea-on' : undefined}
+              />
+            ))}
+          </div>
+          <div className="rv-ideas-copy">
+            <h2>{m['rap.ideas.title']()}</h2>
+            <p className="rv-ideas-lede">{m['rap.ideas.description']()}</p>
+            <ul>
+              {IDEAS.map((idea, index) => (
+                <li key={idea.name}>
+                  <button
+                    type="button"
+                    aria-pressed={index === activeIdea}
+                    onClick={() => setActiveIdea(index)}
+                    onMouseEnter={() => setActiveIdea(index)}
+                  >
+                    <strong>{idea.title()}</strong>
+                    <span>{idea.text()}</span>
+                  </button>
+                </li>
+              ))}
+            </ul>
           </div>
         </section>
 
-        <section className="hl-guide" aria-labelledby="guide-heading">
-          <div className="hl-section-intro">
-            <p className="hl-kicker">{m['hotel.guide.eyebrow']()}</p>
-            <h2 id="guide-heading">{m['hotel.guide.title']()}</h2>
-            <p>{m['hotel.guide.intro']()}</p>
+        <section className="rv-tips" aria-labelledby="tips-heading">
+          <div className="rv-head">
+            <h2 id="tips-heading">{m['rap.tips.title']()}</h2>
           </div>
-          <div className="hl-guide-grid">
-            <article>
-              <span>01</span>
-              <h3>{m['hotel.guide.photos.title']()}</h3>
-              <p>{m['hotel.guide.photos.text']()}</p>
-            </article>
-            <article>
-              <span>02</span>
-              <h3>{m['hotel.guide.motion.title']()}</h3>
-              <p>{m['hotel.guide.motion.text']()}</p>
-            </article>
-            <article>
-              <span>03</span>
-              <h3>{m['hotel.guide.review.title']()}</h3>
-              <p>{m['hotel.guide.review.text']()}</p>
-            </article>
-          </div>
-        </section>
-
-        <section className="hl-prompt-guide" aria-labelledby="prompt-heading">
-          <div className="hl-section-intro">
-            <p className="hl-kicker">{m['hotel.prompt.eyebrow']()}</p>
-            <h2 id="prompt-heading">{m['hotel.prompt.title']()}</h2>
-            <div className="hl-prompt-ratio" aria-hidden="true">
-              <span>9:16</span>
+          <div className="rv-tips-grid">
+            <div>
+              <h3>
+                <Check size={18} /> {m['rap.tips.good.title']()}
+              </h3>
+              <ul>
+                <li>{m['rap.tips.good.one']()}</li>
+                <li>{m['rap.tips.good.two']()}</li>
+                <li>{m['rap.tips.good.three']()}</li>
+                <li>{m['rap.tips.good.four']()}</li>
+              </ul>
+            </div>
+            <div>
+              <h3>
+                <X size={18} /> {m['rap.tips.bad.title']()}
+              </h3>
+              <ul>
+                <li>{m['rap.tips.bad.one']()}</li>
+                <li>{m['rap.tips.bad.two']()}</li>
+                <li>{m['rap.tips.bad.three']()}</li>
+                <li>{m['rap.tips.bad.four']()}</li>
+              </ul>
             </div>
           </div>
-          <div className="hl-prose">
-            <p>{m['hotel.prompt.one']()}</p>
-            <p>{m['hotel.prompt.two']()}</p>
-            <CopyPrompt />
-          </div>
         </section>
 
-        <Pricing />
+        <div className="rv-pricing">
+          <Pricing />
+        </div>
 
         {paywallMounted && (
           <Suspense fallback={null}>
@@ -1090,23 +1104,24 @@ export function HotelLobbyPage() {
           </Suspense>
         )}
 
-        <section id="faq" className="hl-faq" aria-labelledby="faq-heading">
-          <div className="hl-section-intro">
-            <p className="hl-kicker">{m['hotel.faq.eyebrow']()}</p>
-            <h2 id="faq-heading">{m['hotel.faq.title']()}</h2>
+        <section id="faq" className="rv-faq" aria-labelledby="faq-heading">
+          <div className="rv-head">
+            <p className="rv-eyebrow">{m['rap.faq.eyebrow']()}</p>
+            <h2 id="faq-heading">{m['rap.faq.title']()}</h2>
           </div>
-          <div className="hl-faq-list">
+          <div className="rv-faq-list">
             {/* Static message refs: a template-literal key (m[`…${x}`])
                 pulls every message of both locales into the client bundle. */}
             {[
-              [m['hotel.faq.one.question'], m['hotel.faq.one.answer']],
-              [m['hotel.faq.two.question'], m['hotel.faq.two.answer']],
-              [m['hotel.faq.three.question'], m['hotel.faq.three.answer']],
-              [m['hotel.faq.four.question'], m['hotel.faq.four.answer']],
-              [m['hotel.faq.five.question'], m['hotel.faq.five.answer']],
-              [m['hotel.faq.six.question'], m['hotel.faq.six.answer']],
-              [m['hotel.faq.seven.question'], m['hotel.faq.seven.answer']],
-              [m['hotel.faq.eight.question'], m['hotel.faq.eight.answer']],
+              [m['rap.faq.one.question'], m['rap.faq.one.answer']],
+              [m['rap.faq.two.question'], m['rap.faq.two.answer']],
+              [m['rap.faq.three.question'], m['rap.faq.three.answer']],
+              [m['rap.faq.four.question'], m['rap.faq.four.answer']],
+              [m['rap.faq.five.question'], m['rap.faq.five.answer']],
+              [m['rap.faq.six.question'], m['rap.faq.six.answer']],
+              [m['rap.faq.seven.question'], m['rap.faq.seven.answer']],
+              [m['rap.faq.eight.question'], m['rap.faq.eight.answer']],
+              [m['rap.faq.nine.question'], m['rap.faq.nine.answer']],
             ].map(([question, answer], item) => (
               <details key={item}>
                 <summary>{question()}</summary>
@@ -1116,62 +1131,40 @@ export function HotelLobbyPage() {
           </div>
         </section>
 
-        <section className="hl-bottom">
-          <h2>{m['hotel.bottom.title']()}</h2>
-          <p>{m['hotel.bottom.text']()}</p>
-          <a className="hl-button" href="#create">
-            {m['hotel.hero.cta']()} <ArrowRight size={18} />
-          </a>
+        <section className="rv-closing">
+          <div>
+            <h2>{m['rap.bottom.title']()}</h2>
+            <p>{m['rap.bottom.text']()}</p>
+            <a className="br-btn" href="#create">
+              {m['hotel.hero.cta']()} <ArrowRight size={18} />
+            </a>
+          </div>
         </section>
       </main>
-      <footer className="hl-footer">
-        <div>
-          <Link href="/" className="hl-brand">
-            <img
-              src={envConfigs.app_logo}
-              alt={m['hotel.logo_alt']()}
-              width={512}
-              height={512}
-              className="hl-brand-mark"
-            />
-            <span>{envConfigs.app_name}</span>
-          </Link>
-          <p>{m['hotel.footer.line']()}</p>
-        </div>
-        <div className="hl-footer-links">
-          <a href="mailto:support@hotel-lobby.org">support@hotel-lobby.org</a>
-          <Link href="/privacy-policy">{m['landing.footer.privacy']()}</Link>
-          <Link href="/terms-of-service">{m['landing.footer.terms']()}</Link>
-          <Link href="/acceptable-use-policy">{m['landing.footer.aup']()}</Link>
-        </div>
-        <FooterBadgeList className="basis-full" />
-      </footer>
+      <Footer />
     </div>
   );
 }
 
-function CopyPrompt() {
-  const [copied, setCopied] = useState(false);
-  const text = m['hotel.prompt.copy_text']();
-
-  const copy = async () => {
-    try {
-      await navigator.clipboard.writeText(text);
-      setCopied(true);
-      toast.success(m['hotel.prompt.copied']());
-      setTimeout(() => setCopied(false), 2000);
-    } catch {
-      // Clipboard blocked: the prompt stays selectable in the block.
-    }
-  };
-
+/** Karaoke-style burned-in caption: words light up on the beat. */
+function LyricCaption() {
+  const lines = [m['rap.hero.lyric_one'](), m['rap.hero.lyric_two']()];
+  const [line, setLine] = useState(0);
+  useEffect(() => {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const timer = setInterval(
+      () => setLine((current) => (current + 1) % lines.length),
+      3800
+    );
+    return () => clearInterval(timer);
+  }, [lines.length]);
   return (
-    <div className="hl-copy-prompt">
-      <pre>{text}</pre>
-      <button type="button" className="hl-button" onClick={copy}>
-        {copied ? <Check size={18} /> : <Copy size={18} />}
-        {copied ? m['hotel.prompt.copied']() : m['hotel.prompt.copy']()}
-      </button>
-    </div>
+    <p className="rv-caption" aria-hidden="true" key={line}>
+      {lines[line].split(' ').map((word, index) => (
+        <span key={index} style={{ animationDelay: `${index * 0.3}s` }}>
+          {word}
+        </span>
+      ))}
+    </p>
   );
 }

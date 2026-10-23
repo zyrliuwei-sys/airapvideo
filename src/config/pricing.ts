@@ -40,18 +40,6 @@ export type PricingProduct = {
  * Keys MUST match what the pricing UI sends as product_id.
  */
 export const pricingCatalog: Record<string, PricingProduct> = {
-  pack_single: {
-    productId: 'pack_single',
-    productName: 'Single Video',
-    planName: 'Single Video',
-    description: 'Single Video',
-    type: PaymentType.ONE_TIME,
-    // $4.90 for one 8 s video (440 credits = duetCredits(8)). Added
-    // 2026-10-04 after no paid orders the day the floor moved to $9.90.
-    priceInCents: 490,
-    currency: 'usd',
-    credits: 440,
-  },
   pack_starter: {
     productId: 'pack_starter',
     productName: 'Starter Pack',

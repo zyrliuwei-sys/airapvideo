@@ -6,8 +6,8 @@ import { m } from '@/paraglide/messages.js';
 const STATIC_PAGES: { path: string; title: string; description: string }[] = [
   {
     path: '',
-    title: 'Hotel Lobby AI Filter',
-    description: 'Two-person duet planning and prompt guide',
+    title: 'AI Rap Video Generator',
+    description: 'Turn two photos into a lip-synced AI rap music video',
   },
   {
     path: '/privacy-policy',
