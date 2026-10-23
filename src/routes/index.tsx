@@ -25,7 +25,7 @@ export const Route = createFileRoute('/')({
         { property: 'og:type', content: 'website' },
         {
           property: 'og:image',
-          content: `${envConfigs.app_url}/videos/examples/booth-duo.jpg`,
+          content: `${envConfigs.app_url}/videos/examples/besties.jpg`,
         },
         { name: 'twitter:card', content: 'summary_large_image' },
       ],
@@ -34,7 +34,7 @@ export const Route = createFileRoute('/')({
         {
           rel: 'preload',
           as: 'image',
-          href: '/videos/examples/booth-duo.jpg',
+          href: '/videos/examples/besties.jpg',
           fetchPriority: 'high',
         },
         { rel: 'canonical', href: urlFor(locale) },
@@ -55,7 +55,7 @@ export const Route = createFileRoute('/')({
             description,
             url: urlFor(locale),
             inLanguage: locale,
-            primaryImageOfPage: `${envConfigs.app_url}/videos/examples/booth-duo.jpg`,
+            primaryImageOfPage: `${envConfigs.app_url}/videos/examples/besties.jpg`,
           }),
         },
       ],

@@ -51,27 +51,27 @@ const clip = (name: string) => ({
   src: `/videos/examples/${name}.mp4`,
   poster: `/videos/examples/${name}.jpg`,
 });
-const boothClip = clip('booth-duo');
-const studioClip = clip('studio-chemistry');
-const sessionClip = clip('studio-session');
-const frontRowClip = clip('front-row');
-const birthdayClip = clip('birthday-duo');
+const heroClip = clip('besties');
+const previewClip = clip('cowork');
+const coupleClip = clip('couple');
+const familyClip = clip('grandpa');
+const birthdayClip = clip('bday');
 
 const IDEAS = [
   {
-    name: 'friends',
-    ...sessionClip,
+    name: 'couple',
+    ...coupleClip,
     title: m['rap.ideas.friends.title'],
     text: m['rap.ideas.friends.text'],
   },
   {
-    name: 'siblings',
-    ...frontRowClip,
+    name: 'family',
+    ...familyClip,
     title: m['rap.ideas.battle.title'],
     text: m['rap.ideas.battle.text'],
   },
   {
-    name: 'couple',
+    name: 'birthday',
     ...birthdayClip,
     title: m['rap.ideas.couples.title'],
     text: m['rap.ideas.couples.text'],
@@ -646,7 +646,7 @@ export function RapVideoPage() {
             <div className="rv-frame">
               {/* Poster preloaded in routes/index.tsx: keep in sync. */}
               <LoopVideo
-                {...boothClip}
+                {...heroClip}
                 label={m['hotel.hero.image_alt']()}
                 eager
               />
@@ -923,7 +923,7 @@ export function RapVideoPage() {
                   />
                 ) : (
                   <LoopVideo
-                    {...studioClip}
+                    {...previewClip}
                     className="rv-preview-loop"
                     label={m['rap.features.sync.alt']()}
                   />

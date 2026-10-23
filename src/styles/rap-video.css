@@ -166,14 +166,14 @@
   width: 84px;
   height: 84px;
   border-radius: 6px;
-  background: #4a2818 url('/videos/examples/booth-duo.jpg') no-repeat;
+  background: #2a1d33 url('/videos/examples/besties.jpg') no-repeat;
   background-size: 260% auto;
 }
 .rv-crop-a {
-  background-position: 15% 31%;
+  background-position: 4% 36%;
 }
 .rv-crop-b {
-  background-position: 100% 36%;
+  background-position: 98% 42%;
 }
 
 /* ─── Facts strip ─────────────────────────────────────────────────────── */
@@ -438,9 +438,6 @@
   object-fit: contain;
   background: #120c09;
 }
-.rv-preview-media:has(.rv-preview-loop) {
-  aspect-ratio: 3 / 4;
-}
 .rv-preview-media video.rv-preview-loop {
   object-fit: cover;
 }
@@ -643,9 +640,9 @@
 }
 .rv-ideas-media {
   position: relative;
-  width: min(100%, 460px);
+  width: min(100%, 380px);
   justify-self: center;
-  aspect-ratio: 3 / 4;
+  aspect-ratio: 9 / 16;
   overflow: hidden;
   border-radius: 16px;
   background: #4a2818;
