@@ -101,7 +101,7 @@ All admin pages include:
 
 ## Cloudflare deployment
 
-The `hotel-lobby-ai` Worker builds and deploys automatically when `main` is
+The `airapvideo` Worker builds and deploys automatically when `main` is
 pushed. Cloudflare Workers Builds runs `pnpm cf:ci:build`, then
 `pnpm exec wrangler deploy`.
 
