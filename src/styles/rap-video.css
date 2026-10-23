@@ -73,8 +73,8 @@
   animation: rv-rise 0.8s ease-out both;
 }
 .rv-hero h1 {
-  max-width: 700px;
-  font-size: clamp(36px, 4.2vw, 58px);
+  max-width: 720px;
+  font-size: clamp(34px, 3.7vw, 52px);
   line-height: 1.05;
 }
 .rv-hero-sub {
@@ -511,6 +511,16 @@
   color: rgba(244, 237, 227, 0.8);
   font-size: 17px;
   line-height: 1.8;
+}
+.rv-guide-more {
+  margin-top: 32px !important;
+  padding-top: 20px;
+  border-top: 1px solid var(--br-line);
+  font-size: 15px !important;
+}
+.rv-guide-more a {
+  color: var(--br-orange);
+  text-underline-offset: 3px;
 }
 
 /* ─── Features bento ──────────────────────────────────────────────────── */

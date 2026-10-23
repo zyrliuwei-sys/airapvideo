@@ -55,8 +55,11 @@ const ALL_PROVIDERS: PaymentProvider[] = [
 export function Pricing({
   title,
   variant = 'section',
+  asPageTitle = false,
 }: {
   title?: string;
+  /** Render the heading as the page's H1 (standalone /pricing page). */
+  asPageTitle?: boolean;
   /** `dialog` drops the page-section chrome for use inside a modal. */
   variant?: 'section' | 'dialog';
 } = {}) {
@@ -310,6 +313,7 @@ export function Pricing({
 
   const dialog = variant === 'dialog';
   const Wrapper = dialog ? 'div' : 'section';
+  const Heading = asPageTitle ? 'h1' : 'h2';
 
   return (
     <Wrapper
@@ -320,7 +324,7 @@ export function Pricing({
     >
       <div className="mx-auto max-w-5xl">
         <div className={dialog ? 'mb-8 pr-8 text-center' : 'mb-20 text-center'}>
-          <h2
+          <Heading
             className={
               dialog
                 ? 'font-serif text-2xl font-normal tracking-tight sm:text-3xl'
@@ -328,7 +332,7 @@ export function Pricing({
             }
           >
             {title ?? m['landing.pricing.title']()}
-          </h2>
+          </Heading>
           <p className="text-muted-foreground mt-5">
             {m['landing.pricing.description']()}
           </p>

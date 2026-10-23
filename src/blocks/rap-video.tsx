@@ -973,6 +973,18 @@ export function RapVideoPage() {
             <p>{m['rap.guide.why.one']()}</p>
             <h3 id="best">{m['rap.guide.best.title']()}</h3>
             <p>{m['rap.guide.best.one']()}</p>
+            <p className="rv-guide-more">
+              {m['rap.guide.more']()}{' '}
+              <Link href="/blog/how-to-make-an-ai-rap-video">
+                {m['rap.guide.link_make']()}
+              </Link>
+              {', '}
+              <Link href="/blog/best-photos-for-ai-rap-video">
+                {m['rap.guide.link_photos']()}
+              </Link>
+              {m['rap.guide.link_and']()}
+              <Link href="/pricing">{m['rap.guide.pricing_link']()}</Link>.
+            </p>
           </article>
         </section>
 
