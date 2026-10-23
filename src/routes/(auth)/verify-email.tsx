@@ -299,5 +299,12 @@ function VerifyEmailPage() {
 }
 
 export const Route = createFileRoute('/(auth)/verify-email')({
+  head: () => ({
+    meta: [
+      {
+        title: `${m['common.sign.verify_email_page_title']()} | ${envConfigs.app_name}`,
+      },
+    ],
+  }),
   component: VerifyEmailPage,
 });

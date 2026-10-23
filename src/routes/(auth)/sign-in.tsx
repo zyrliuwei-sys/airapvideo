@@ -318,5 +318,10 @@ function SignInPage() {
 }
 
 export const Route = createFileRoute('/(auth)/sign-in')({
+  head: () => ({
+    meta: [
+      { title: `${m['common.sign.sign_in_title']()} | ${envConfigs.app_name}` },
+    ],
+  }),
   component: SignInPage,
 });

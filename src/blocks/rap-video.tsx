@@ -922,14 +922,28 @@ export function RapVideoPage() {
                     onError={forget}
                   />
                 ) : (
-                  <div className="rv-preview-empty">
-                    <Clapperboard size={28} />
-                    <span>{m['hotel.create.preview']()}</span>
-                  </div>
+                  <LoopVideo
+                    {...studioClip}
+                    className="rv-preview-loop"
+                    label={m['rap.features.sync.alt']()}
+                  />
                 )}
               </div>
-              <p className="rv-preview-title">{m['hotel.create.preview']()}</p>
-              <p>{m['hotel.create.preview_note']()}</p>
+              {task?.videoUrl || task?.sceneImageUrl || preview?.imageUrl ? (
+                <>
+                  <p className="rv-preview-title">
+                    {m['hotel.create.preview']()}
+                  </p>
+                  <p>{m['hotel.create.preview_note']()}</p>
+                </>
+              ) : (
+                <>
+                  <p className="rv-preview-title">
+                    {m['rap.create.example_title']()}
+                  </p>
+                  <p>{m['rap.create.example_note']()}</p>
+                </>
+              )}
             </aside>
           </div>
         </section>
@@ -967,18 +981,10 @@ export function RapVideoPage() {
             <h2 id="features-heading">{m['rap.features.title']()}</h2>
           </div>
           <div className="rv-bento">
-            <article className="rv-cell rv-cell-wide rv-cell-image">
-              <div className="rv-cell-media">
-                <LoopVideo
-                  {...studioClip}
-                  label={m['rap.features.sync.alt']()}
-                />
-              </div>
-              <div>
-                <AudioLines size={22} />
-                <h3>{m['rap.features.sync.title']()}</h3>
-                <p>{m['rap.features.sync.text']()}</p>
-              </div>
+            <article className="rv-cell rv-cell-wide">
+              <AudioLines size={22} />
+              <h3>{m['rap.features.sync.title']()}</h3>
+              <p>{m['rap.features.sync.text']()}</p>
             </article>
             <article className="rv-cell">
               <Users size={22} />

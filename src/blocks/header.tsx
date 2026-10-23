@@ -1,4 +1,4 @@
-import { lazy, Suspense, useState } from 'react';
+import { lazy, Suspense, useEffect, useState } from 'react';
 import { Menu, X } from 'lucide-react';
 
 import { useSession } from '@/core/auth/client';
@@ -21,7 +21,11 @@ const SiteUserMenu = lazy(() =>
 export function Header() {
   const [open, setOpen] = useState(false);
   const { data: session } = useSession();
-  const user = session?.user;
+  // The session is only known in the browser: render the signed-out state
+  // for SSR and the first client render, then switch, so hydration matches.
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  const user = mounted ? session?.user : undefined;
 
   // Section links point at the homepage so they also work from inner pages.
   const links = [

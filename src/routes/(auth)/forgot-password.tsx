@@ -168,5 +168,12 @@ function ForgotPasswordPage() {
 }
 
 export const Route = createFileRoute('/(auth)/forgot-password')({
+  head: () => ({
+    meta: [
+      {
+        title: `${m['common.sign.forgot_password_title']()} | ${envConfigs.app_name}`,
+      },
+    ],
+  }),
   component: ForgotPasswordPage,
 });

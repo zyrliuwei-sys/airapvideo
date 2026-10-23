@@ -326,6 +326,23 @@ function SignUpPage() {
                             {m['common.sign.sign_in_title']()}
                           </Link>
                         </FieldDescription>
+                        <FieldDescription className="text-center text-xs">
+                          {m['common.sign.agree_prefix']()}{' '}
+                          <Link
+                            href="/terms-of-service"
+                            className="underline underline-offset-4"
+                          >
+                            {m['landing.footer.terms']()}
+                          </Link>{' '}
+                          {m['common.sign.agree_and']()}{' '}
+                          <Link
+                            href="/privacy-policy"
+                            className="underline underline-offset-4"
+                          >
+                            {m['landing.footer.privacy']()}
+                          </Link>
+                          .
+                        </FieldDescription>
                       </Field>
                     </>
                   )}
@@ -340,5 +357,10 @@ function SignUpPage() {
 }
 
 export const Route = createFileRoute('/(auth)/sign-up')({
+  head: () => ({
+    meta: [
+      { title: `${m['common.sign.sign_up_title']()} | ${envConfigs.app_name}` },
+    ],
+  }),
   component: SignUpPage,
 });

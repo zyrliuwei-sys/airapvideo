@@ -2,6 +2,7 @@ import { createFileRoute } from '@tanstack/react-router';
 
 import { envConfigs } from '@/config';
 import { baseLocale, locales, localizeUrl } from '@/paraglide/runtime.js';
+import { BLOG_POST_SLUGS } from '@/content/posts';
 
 const STATIC_PATHS = [
   '',
@@ -59,19 +60,23 @@ export const Route = createFileRoute('/sitemap.xml')({
           priority: path === '' ? 1 : 0.8,
         }));
 
-        // Only published project articles belong in the sitemap. The bundled
-        // ShipAny tutorial posts are demo content and carry noindex.
+        // Blog: the bundled MDX guides plus published database articles.
+        entries.push({
+          path: '/blog',
+          changeFrequency: 'weekly',
+          priority: 0.7,
+        });
+        for (const slug of BLOG_POST_SLUGS) {
+          entries.push({
+            path: `/blog/${slug}`,
+            changeFrequency: 'monthly',
+            priority: 0.6,
+          });
+        }
         try {
           const { listPublishedArticles } =
             await import('@/modules/posts/service');
           const rows = await listPublishedArticles().catch(() => []);
-          if (rows.length > 0) {
-            entries.push({
-              path: '/blog',
-              changeFrequency: 'weekly',
-              priority: 0.7,
-            });
-          }
           for (const post of rows) {
             entries.push({
               path: `/blog/${post.slug}`,

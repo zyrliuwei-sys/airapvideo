@@ -10,6 +10,16 @@ const STATIC_PAGES: { path: string; title: string; description: string }[] = [
     description: 'Turn two photos into a lip-synced AI rap music video',
   },
   {
+    path: '/blog/how-to-make-an-ai-rap-video',
+    title: 'How to Make an AI Rap Video from Two Photos',
+    description: 'Step-by-step guide from photos to a finished rap video',
+  },
+  {
+    path: '/blog/best-photos-for-ai-rap-video',
+    title: 'Which Photos Work Best for an AI Rap Video',
+    description: 'What to upload, what to avoid, and quick fixes',
+  },
+  {
     path: '/privacy-policy',
     title: 'Privacy Policy',
     description: 'Privacy information',

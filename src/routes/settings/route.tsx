@@ -4,7 +4,6 @@ import {
   CreditCard,
   Film,
   Home,
-  Key,
   LayoutDashboard,
   LifeBuoy,
   Receipt,
@@ -17,7 +16,12 @@ import { SupportWidget } from '@/blocks/support-widget';
 import { AppLayout } from '@/components/app-layout';
 
 export const Route = createFileRoute('/settings')({
-  head: () => ({ meta: [{ name: 'robots', content: 'noindex,nofollow' }] }),
+  head: () => ({
+    meta: [
+      { title: `${m['common.nav.settings']()} | ${envConfigs.app_name}` },
+      { name: 'robots', content: 'noindex,nofollow' },
+    ],
+  }),
   component: SettingsLayout,
 });
 
@@ -55,12 +59,6 @@ function SettingsLayout() {
       group,
     },
     {
-      href: '/settings/apikeys',
-      label: m['settings.nav.apikeys'](),
-      icon: Key,
-      group,
-    },
-    {
       href: '/settings/tickets',
       label: m['settings.nav.tickets'](),
       icon: LifeBuoy,
@@ -74,7 +72,7 @@ function SettingsLayout() {
       label: m['settings.nav.profile'](),
       icon: User,
     },
-    { href: '/', label: m['common.systems.home'](), icon: Home, newTab: true },
+    { href: '/', label: m['common.systems.home'](), icon: Home },
   ];
 
   return (

@@ -1,36 +1,9 @@
-import { createFileRoute } from '@tanstack/react-router';
+import { createFileRoute, redirect } from '@tanstack/react-router';
 
-import { envConfigs } from '@/config';
-import { m } from '@/paraglide/messages.js';
-import { getLocale, localizeUrl } from '@/paraglide/runtime.js';
-import { RapVideoPage } from '@/blocks/rap-video';
-
+// Legacy URL from an earlier version of the site: send visitors (and any
+// existing links) to the homepage permanently.
 export const Route = createFileRoute('/ai-livestream')({
-  loader: () => ({ locale: getLocale() }),
-  head: ({ loaderData }) => {
-    const locale = loaderData?.locale ?? 'en';
-    const title = m['common.metadata.title']({}, { locale });
-    const description = m['common.metadata.description']({}, { locale });
-    return {
-      meta: [
-        { title },
-        { name: 'description', content: description },
-        { property: 'og:title', content: title },
-        { property: 'og:description', content: description },
-        { property: 'og:type', content: 'website' },
-        {
-          property: 'og:image',
-          content: `${envConfigs.app_url}/videos/examples/booth-duo.jpg`,
-        },
-        { name: 'twitter:card', content: 'summary_large_image' },
-      ],
-      links: [
-        {
-          rel: 'canonical',
-          href: localizeUrl(`${envConfigs.app_url}/`, { locale }).href,
-        },
-      ],
-    };
+  beforeLoad: () => {
+    throw redirect({ to: '/', statusCode: 301 });
   },
-  component: RapVideoPage,
 });

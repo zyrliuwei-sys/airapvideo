@@ -184,5 +184,12 @@ function ResetPasswordPage() {
 }
 
 export const Route = createFileRoute('/(auth)/reset-password')({
+  head: () => ({
+    meta: [
+      {
+        title: `${m['common.sign.reset_password_title']()} | ${envConfigs.app_name}`,
+      },
+    ],
+  }),
   component: ResetPasswordPage,
 });
