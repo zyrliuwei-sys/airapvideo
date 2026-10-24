@@ -84,6 +84,9 @@
   font-size: 18px;
   line-height: 1.6;
 }
+.rv-hero-sub-short {
+  display: none;
+}
 .rv-hero-stage {
   position: relative;
   display: flex;
@@ -857,6 +860,9 @@
   font-size: 15px;
   line-height: 1.55;
 }
+.rv-m-only {
+  display: none;
+}
 .rv-ideas-copy button[aria-pressed='false'] strong {
   color: var(--br-smoke);
 }
@@ -1115,17 +1121,22 @@
     width: 64px;
     height: 64px;
   }
-  .rv-facts {
-    padding: 0 16px;
+  .rv-facts,
+  .rv-guide,
+  .rv-features,
+  .rv-how,
+  .rv-tips,
+  .rv-hero .rv-actions,
+  .rv-hero .rv-hero-note,
+  .rv-ideas-lede,
+  .rv-d-only {
+    display: none;
   }
-  .rv-facts div {
-    padding: 22px 12px 22px 0;
+  .rv-m-only {
+    display: inline;
   }
-  .rv-facts div + div {
-    padding-left: 12px;
-  }
-  .rv-facts strong {
-    font-size: 17px;
+  .rv-ideas-copy h2 {
+    margin-bottom: 20px;
   }
   .rv-studio {
     grid-template-columns: 1fr;
@@ -1264,26 +1275,57 @@
   background: var(--br-surface);
 }
 
-.rv-photo-adjust {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  min-height: 36px;
-  margin-top: 5px;
-  color: var(--br-smoke);
-  font-size: 12px;
-  cursor: pointer;
-}
-.rv-photo-adjust:hover {
-  color: var(--br-orange);
-}
-.rv-photo-adjust:disabled {
-  opacity: 0.5;
-  cursor: default;
-}
 .rv-local-preview-note {
   margin: 5px 0 0;
   color: var(--br-brass);
   font-size: 12px;
   line-height: 1.6;
+}
+
+/* Phones: the generator follows the hero copy, and the demo clip takes the
+   generator's old slot. `display: contents` lifts the hero's two halves into
+   main's flex column so `order` can separate them. */
+@media (max-width: 640px) {
+  .rv-page main {
+    display: flex;
+    flex-direction: column;
+  }
+  .rv-page main > * {
+    order: 4;
+  }
+  .rv-page main > .rv-hero {
+    display: contents;
+  }
+  .rv-page .rv-hero-copy {
+    order: 0;
+    padding: 40px 16px 0;
+  }
+  .rv-page .rv-hero-copy {
+    text-align: center;
+  }
+  .rv-page .rv-hero-copy h1 {
+    margin: 0 auto;
+  }
+  .rv-page .rv-hero-sub-long {
+    display: none;
+  }
+  .rv-page .rv-hero-sub-short {
+    display: block;
+    margin: 16px auto 0;
+  }
+  .rv-page main > .rv-create {
+    order: 1;
+    padding-top: 32px;
+  }
+  .rv-page main > .rv-create > .rv-head {
+    display: none;
+  }
+  .rv-page main > .rv-facts,
+  .rv-page main > .rv-examples {
+    order: 2;
+  }
+  .rv-page .rv-hero-stage {
+    order: 3;
+    padding: 0 16px 64px;
+  }
 }

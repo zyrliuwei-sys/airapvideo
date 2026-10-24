@@ -342,6 +342,34 @@
     padding: 0 14px;
   }
 }
+@media (max-width: 640px) {
+  .br-footer-inner {
+    padding: 40px var(--br-gutter) 24px;
+  }
+  .br-footer-top {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px 20px;
+    margin-bottom: 24px;
+  }
+  .br-footer-brand {
+    flex-basis: 100%;
+    margin-bottom: 8px;
+  }
+  .br-footer-col {
+    display: contents;
+  }
+  .br-header-actions .br-btn-sm,
+  .br-footer-brand p,
+  .br-footer-col h2,
+  .br-footer-desktop {
+    display: none;
+  }
+  .br-footer-bottom {
+    margin-top: 20px;
+    padding-top: 16px;
+  }
+}
 @media (prefers-reduced-motion: reduce) {
   .br-btn {
     transition: none;

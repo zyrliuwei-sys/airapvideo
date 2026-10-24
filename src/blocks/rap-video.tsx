@@ -30,7 +30,6 @@ import {
 } from '@/config/hotel-lobby-sizes';
 import { apiGet, apiPost } from '@/lib/api-client';
 import { draftDelete, draftGet, draftSet } from '@/lib/draft-store';
-import type { CropSettings } from '@/lib/image-crop';
 import { track } from '@/lib/track';
 import { m } from '@/paraglide/messages.js';
 import { localizeHref } from '@/paraglide/runtime.js';
@@ -44,7 +43,6 @@ import '@/styles/rap-video.css';
 // The paywall is only needed when a visitor starts the paid flow: keep its
 // dialog code out of the homepage's initial JS.
 const PaywallDialog = lazy(() => import('@/blocks/paywall-dialog'));
-const PhotoCropDialog = lazy(() => import('@/components/photo-crop-dialog'));
 
 // Example clips (muted loops) with their JPEG posters.
 const clip = (name: string) => ({
@@ -63,18 +61,21 @@ const IDEAS = [
     ...coupleClip,
     title: m['rap.ideas.friends.title'],
     text: m['rap.ideas.friends.text'],
+    short: m['rap.ideas.friends.short'],
   },
   {
     name: 'family',
     ...familyClip,
     title: m['rap.ideas.battle.title'],
     text: m['rap.ideas.battle.text'],
+    short: m['rap.ideas.battle.short'],
   },
   {
     name: 'birthday',
     ...birthdayClip,
     title: m['rap.ideas.couples.title'],
     text: m['rap.ideas.couples.text'],
+    short: m['rap.ideas.couples.short'],
   },
 ];
 
@@ -280,11 +281,6 @@ function PhotoInput({
   onFile: (file: File | null) => void;
   disabled?: boolean;
 }) {
-  const [editing, setEditing] = useState<File | null>(null);
-  const [cropSettings, setCropSettings] = useState<CropSettings>();
-  const original = useRef<File | null>(null);
-  // Only cropped Files leave this local editor, and only after Create is pressed.
-  // Keep the source in memory so re-cropping does not repeatedly compress it.
   // Derived from the file prop so a draft restored after sign-in shows too.
   const [preview, setPreview] = useState<string>();
   useEffect(() => {
@@ -321,9 +317,10 @@ function PhotoInput({
                   selected.type
                 )
               ) {
-                toast.error(m['studio.crop.error']());
+                toast.error(m['studio.photo_error']());
               } else {
-                setEditing(selected);
+                onFile(selected);
+                track('hl_photo_upload');
               }
             }
             e.target.value = '';
@@ -352,63 +349,10 @@ function PhotoInput({
           className="rv-photo-remove"
           disabled={disabled}
           aria-label={m['studio.remove_photo']({ person: label })}
-          onClick={() => {
-            original.current = null;
-            setCropSettings(undefined);
-            onFile(null);
-          }}
+          onClick={() => onFile(null)}
         >
           <X size={15} />
         </button>
-      )}
-      {file && (
-        <button
-          type="button"
-          className="rv-photo-adjust"
-          disabled={disabled}
-          onClick={() => setEditing(original.current || file)}
-          aria-label={m['studio.crop.edit_person']({ person: label })}
-        >
-          <Crop size={14} />
-          {m['studio.crop.edit']()}
-        </button>
-      )}
-      {editing && (
-        <Suspense
-          fallback={
-            <p className="rv-upload-format" role="status">
-              {m['studio.crop.loading']()}
-            </p>
-          }
-        >
-          <PhotoCropDialog
-            file={editing}
-            initialSettings={
-              editing === original.current ? cropSettings : undefined
-            }
-            labels={{
-              title: m['studio.crop.title']({ person: label }),
-              description: m['studio.crop.description'](),
-              frame: m['studio.crop.frame'](),
-              original: m['studio.crop.original'](),
-              portrait: m['studio.crop.portrait'](),
-              square: m['studio.crop.square'](),
-              zoom: m['studio.crop.zoom'](),
-              reset: m['studio.crop.reset'](),
-              cancel: m['studio.crop.cancel'](),
-              apply: m['studio.crop.apply'](),
-              error: m['studio.crop.error'](),
-            }}
-            onCancel={() => setEditing(null)}
-            onConfirm={(cropped, settings) => {
-              original.current = editing;
-              setCropSettings(settings);
-              onFile(cropped);
-              setEditing(null);
-              track('hl_photo_upload');
-            }}
-          />
-        </Suspense>
       )}
     </div>
   );
@@ -721,7 +665,12 @@ export function RapVideoPage() {
           <div className="rv-hero-copy">
             <p className="rv-eyebrow">{m['rap.hero.eyebrow']()}</p>
             <h1>{m['rap.hero.title']()}</h1>
-            <p className="rv-hero-sub">{m['rap.hero.subtitle']()}</p>
+            <p className="rv-hero-sub rv-hero-sub-long">
+              {m['rap.hero.subtitle']()}
+            </p>
+            <p className="rv-hero-sub rv-hero-sub-short">
+              {m['rap.hero.subtitle_short']()}
+            </p>
             <div className="rv-actions">
               <a href="#create" className="br-btn">
                 {m['hotel.hero.cta']()} <ArrowRight size={18} />
@@ -820,9 +769,7 @@ export function RapVideoPage() {
               </div>
 
               <p className="rv-upload-format">{m['hotel.create.format']()}</p>
-              <p className="rv-local-preview-note">
-                {m['studio.crop.free_note']()}
-              </p>
+              <p className="rv-local-preview-note">{m['studio.free_note']()}</p>
               <div className="rv-studio-submit">
                 <div className="rv-actions rv-studio-actions">
                   {task?.status === 'success' || task?.status === 'failed' ? (
@@ -1104,7 +1051,10 @@ export function RapVideoPage() {
             ))}
           </div>
           <div className="rv-ideas-copy">
-            <h2>{m['rap.ideas.title']()}</h2>
+            <h2>
+              <span className="rv-d-only">{m['rap.ideas.title']()}</span>
+              <span className="rv-m-only">{m['rap.ideas.title_short']()}</span>
+            </h2>
             <p className="rv-ideas-lede">{m['rap.ideas.description']()}</p>
             <ul>
               {IDEAS.map((idea, index) => (
@@ -1116,7 +1066,8 @@ export function RapVideoPage() {
                     onMouseEnter={() => setActiveIdea(index)}
                   >
                     <strong>{idea.title()}</strong>
-                    <span>{idea.text()}</span>
+                    <span className="rv-d-only">{idea.text()}</span>
+                    <span className="rv-m-only">{idea.short()}</span>
                   </button>
                 </li>
               ))}
@@ -1179,19 +1130,70 @@ export function RapVideoPage() {
             {/* Static message refs: a template-literal key (m[`…${x}`])
                 pulls every message of both locales into the client bundle. */}
             {[
-              [m['rap.faq.one.question'], m['rap.faq.one.answer']],
-              [m['rap.faq.two.question'], m['rap.faq.two.answer']],
-              [m['rap.faq.three.question'], m['rap.faq.three.answer']],
-              [m['rap.faq.four.question'], m['rap.faq.four.answer']],
-              [m['rap.faq.five.question'], m['rap.faq.five.answer']],
-              [m['rap.faq.six.question'], m['rap.faq.six.answer']],
-              [m['rap.faq.seven.question'], m['rap.faq.seven.answer']],
-              [m['rap.faq.eight.question'], m['rap.faq.eight.answer']],
-              [m['rap.faq.nine.question'], m['rap.faq.nine.answer']],
-            ].map(([question, answer], item) => (
+              [
+                m['rap.faq.one.question'],
+                m['rap.faq.one.answer'],
+                m['rap.faq.one.question_short'],
+                m['rap.faq.one.answer_short'],
+              ],
+              [
+                m['rap.faq.two.question'],
+                m['rap.faq.two.answer'],
+                m['rap.faq.two.question_short'],
+                m['rap.faq.two.answer_short'],
+              ],
+              [
+                m['rap.faq.three.question'],
+                m['rap.faq.three.answer'],
+                m['rap.faq.three.question_short'],
+                m['rap.faq.three.answer_short'],
+              ],
+              [
+                m['rap.faq.four.question'],
+                m['rap.faq.four.answer'],
+                m['rap.faq.four.question_short'],
+                m['rap.faq.four.answer_short'],
+              ],
+              [
+                m['rap.faq.five.question'],
+                m['rap.faq.five.answer'],
+                m['rap.faq.five.question_short'],
+                m['rap.faq.five.answer_short'],
+              ],
+              [
+                m['rap.faq.six.question'],
+                m['rap.faq.six.answer'],
+                m['rap.faq.six.question_short'],
+                m['rap.faq.six.answer_short'],
+              ],
+              [
+                m['rap.faq.seven.question'],
+                m['rap.faq.seven.answer'],
+                m['rap.faq.seven.question_short'],
+                m['rap.faq.seven.answer_short'],
+              ],
+              [
+                m['rap.faq.eight.question'],
+                m['rap.faq.eight.answer'],
+                m['rap.faq.eight.question_short'],
+                m['rap.faq.eight.answer_short'],
+              ],
+              [
+                m['rap.faq.nine.question'],
+                m['rap.faq.nine.answer'],
+                m['rap.faq.nine.question_short'],
+                m['rap.faq.nine.answer_short'],
+              ],
+            ].map(([question, answer, questionShort, answerShort], item) => (
               <details key={item}>
-                <summary>{question()}</summary>
-                <p>{answer()}</p>
+                <summary>
+                  <span className="rv-d-only">{question()}</span>
+                  <span className="rv-m-only">{questionShort()}</span>
+                </summary>
+                <p>
+                  <span className="rv-d-only">{answer()}</span>
+                  <span className="rv-m-only">{answerShort()}</span>
+                </p>
               </details>
             ))}
           </div>
