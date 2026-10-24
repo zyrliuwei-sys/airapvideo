@@ -30,6 +30,7 @@ import {
 } from '@/config/hotel-lobby-sizes';
 import { apiGet, apiPost } from '@/lib/api-client';
 import { draftDelete, draftGet, draftSet } from '@/lib/draft-store';
+import type { CropSettings } from '@/lib/image-crop';
 import { track } from '@/lib/track';
 import { m } from '@/paraglide/messages.js';
 import { localizeHref } from '@/paraglide/runtime.js';
@@ -43,6 +44,7 @@ import '@/styles/rap-video.css';
 // The paywall is only needed when a visitor starts the paid flow: keep its
 // dialog code out of the homepage's initial JS.
 const PaywallDialog = lazy(() => import('@/blocks/paywall-dialog'));
+const PhotoCropDialog = lazy(() => import('@/components/photo-crop-dialog'));
 
 // Example clips (muted loops) with their JPEG posters.
 const clip = (name: string) => ({
@@ -278,6 +280,11 @@ function PhotoInput({
   onFile: (file: File | null) => void;
   disabled?: boolean;
 }) {
+  const [editing, setEditing] = useState<File | null>(null);
+  const [cropSettings, setCropSettings] = useState<CropSettings>();
+  const original = useRef<File | null>(null);
+  // Only cropped Files leave this local editor, and only after Create is pressed.
+  // Keep the source in memory so re-cropping does not repeatedly compress it.
   // Derived from the file prop so a draft restored after sign-in shows too.
   const [preview, setPreview] = useState<string>();
   useEffect(() => {
@@ -308,8 +315,17 @@ function PhotoInput({
               e.target.value = '';
               return;
             }
-            if (selected) track('hl_photo_upload');
-            onFile(selected);
+            if (selected) {
+              if (
+                !['image/jpeg', 'image/png', 'image/webp'].includes(
+                  selected.type
+                )
+              ) {
+                toast.error(m['studio.crop.error']());
+              } else {
+                setEditing(selected);
+              }
+            }
             e.target.value = '';
           }}
         />
@@ -336,10 +352,63 @@ function PhotoInput({
           className="rv-photo-remove"
           disabled={disabled}
           aria-label={m['studio.remove_photo']({ person: label })}
-          onClick={() => onFile(null)}
+          onClick={() => {
+            original.current = null;
+            setCropSettings(undefined);
+            onFile(null);
+          }}
         >
           <X size={15} />
         </button>
+      )}
+      {file && (
+        <button
+          type="button"
+          className="rv-photo-adjust"
+          disabled={disabled}
+          onClick={() => setEditing(original.current || file)}
+          aria-label={m['studio.crop.edit_person']({ person: label })}
+        >
+          <Crop size={14} />
+          {m['studio.crop.edit']()}
+        </button>
+      )}
+      {editing && (
+        <Suspense
+          fallback={
+            <p className="rv-upload-format" role="status">
+              {m['studio.crop.loading']()}
+            </p>
+          }
+        >
+          <PhotoCropDialog
+            file={editing}
+            initialSettings={
+              editing === original.current ? cropSettings : undefined
+            }
+            labels={{
+              title: m['studio.crop.title']({ person: label }),
+              description: m['studio.crop.description'](),
+              frame: m['studio.crop.frame'](),
+              original: m['studio.crop.original'](),
+              portrait: m['studio.crop.portrait'](),
+              square: m['studio.crop.square'](),
+              zoom: m['studio.crop.zoom'](),
+              reset: m['studio.crop.reset'](),
+              cancel: m['studio.crop.cancel'](),
+              apply: m['studio.crop.apply'](),
+              error: m['studio.crop.error'](),
+            }}
+            onCancel={() => setEditing(null)}
+            onConfirm={(cropped, settings) => {
+              original.current = editing;
+              setCropSettings(settings);
+              onFile(cropped);
+              setEditing(null);
+              track('hl_photo_upload');
+            }}
+          />
+        </Suspense>
       )}
     </div>
   );
@@ -751,6 +820,9 @@ export function RapVideoPage() {
               </div>
 
               <p className="rv-upload-format">{m['hotel.create.format']()}</p>
+              <p className="rv-local-preview-note">
+                {m['studio.crop.free_note']()}
+              </p>
               <div className="rv-studio-submit">
                 <div className="rv-actions rv-studio-actions">
                   {task?.status === 'success' || task?.status === 'failed' ? (

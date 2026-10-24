@@ -368,7 +368,7 @@
   inset: 0;
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
 }
 .rv-upload-filled {
   align-items: flex-end;
@@ -1262,4 +1262,28 @@
 .rv-library input {
   color: var(--br-paper);
   background: var(--br-surface);
+}
+
+.rv-photo-adjust {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 36px;
+  margin-top: 5px;
+  color: var(--br-smoke);
+  font-size: 12px;
+  cursor: pointer;
+}
+.rv-photo-adjust:hover {
+  color: var(--br-orange);
+}
+.rv-photo-adjust:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.rv-local-preview-note {
+  margin: 5px 0 0;
+  color: var(--br-brass);
+  font-size: 12px;
+  line-height: 1.6;
 }

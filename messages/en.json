@@ -1160,5 +1160,20 @@
   "studio.example_note": "Your two photos become one performance. Your video will appear here.",
   "studio.result_note": "Your stage and finished video appear here, ready to preview and download.",
   "landing.pricing.feature_one_video": "1 rap video",
-  "landing.pricing.feature_video_count": "{count} rap videos"
+  "landing.pricing.feature_video_count": "{count} rap videos",
+  "studio.crop.title": "Adjust {person} photo",
+  "studio.crop.description": "Drag to reposition and zoom to crop. Your photo stays on this device.",
+  "studio.crop.frame": "Photo crop preview. Drag or use arrow keys to reposition.",
+  "studio.crop.original": "Original",
+  "studio.crop.portrait": "Portrait 4:5",
+  "studio.crop.square": "Square",
+  "studio.crop.zoom": "Zoom",
+  "studio.crop.reset": "Reset",
+  "studio.crop.cancel": "Cancel",
+  "studio.crop.apply": "Use photo",
+  "studio.crop.error": "Unable to read this photo. Try a JPG, PNG or WebP image.",
+  "studio.crop.edit": "Adjust crop",
+  "studio.crop.edit_person": "Adjust {person} crop",
+  "studio.crop.loading": "Opening local photo editor…",
+  "studio.crop.free_note": "Upload and crop for free. Credits are used only when you generate a video."
 }
