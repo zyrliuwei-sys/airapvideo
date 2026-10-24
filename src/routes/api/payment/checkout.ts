@@ -3,7 +3,7 @@ import { z } from 'zod';
 
 import { assertVideoOrigin, getVideoActor } from '@/core/auth/video-actor';
 import { videoEmailProvider } from '@/core/email/video-delivery';
-import { getPricingProduct } from '@/config/pricing';
+import { getPricingProduct, resolveProductCredits } from '@/config/pricing';
 import { getAllConfigs } from '@/modules/config/service';
 import { recordServerEvent } from '@/modules/events/service';
 import { createCheckout } from '@/modules/payment/service';
@@ -62,6 +62,8 @@ async function POST({ request }: { request: Request }) {
     if (!product) {
       return respErr('Unknown product');
     }
+    const configs = await getAllConfigs();
+    const productCredits = resolveProductCredits(product, configs);
 
     const actor = await getVideoActor(request, true);
     guestCookie = actor.cookie;
@@ -87,7 +89,7 @@ async function POST({ request }: { request: Request }) {
     }
     if (purchase) {
       const input = JSON.parse(purchase.input);
-      if (product.credits < input.costCredits)
+      if (productCredits < input.costCredits)
         return respErr('Choose a pack with enough credits for this video');
       if (!(await reserveCheckout(purchase.id, purchase.userId)))
         return respErr(
@@ -97,20 +99,13 @@ async function POST({ request }: { request: Request }) {
     }
     const buyerId = purchase?.userId || actor.userId!;
 
-    // Optional per-provider "test amount" override (admin-configured).
-    // Only the charged amount is overridden — credits granted and order
-    // amount stored both come from the authoritative catalog.
-    const configs = await getAllConfigs();
+    // Customer checkouts always use the catalog amount. Admin connection tests
+    // have their own endpoint and cannot discount a customer's real order.
     if (contactEmail && !videoEmailProvider(configs))
       throw new Error(
         'Email delivery is unavailable. Leave email blank to continue.'
       );
-    const providerKey = payment_provider || configs.default_payment_provider;
-    const testAmountRaw = providerKey
-      ? configs[`${providerKey}_test_amount`]
-      : undefined;
-    const testAmount = testAmountRaw ? parseInt(testAmountRaw) : 0;
-    const chargeAmount = testAmount > 0 ? testAmount : product.priceInCents;
+    const chargeAmount = product.priceInCents;
 
     // Build success/cancel URLs — only accept same-origin redirects.
     const baseUrl = configs.app_url || 'http://localhost:3000';
@@ -134,7 +129,7 @@ async function POST({ request }: { request: Request }) {
       userEmail: contactEmail,
       productName: product.productName,
       planName: product.planName,
-      credits: product.credits,
+      credits: productCredits,
       creditsValidDays: product.creditsValidDays,
       paymentOrder: {
         productId: product.productId,

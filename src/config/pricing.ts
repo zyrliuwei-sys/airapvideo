@@ -10,6 +10,8 @@
 
 import { PaymentInterval, PaymentType } from '@/core/payment/types';
 
+import { resolveDuetCredits } from './hotel-lobby-pricing';
+
 export type PricingPlanInfo = {
   name: string;
   interval: PaymentInterval;
@@ -25,52 +27,47 @@ export type PricingProduct = {
   priceInCents: number;
   currency: string;
   credits: number;
+  videoCount?: number;
   creditsValidDays?: number;
   plan?: PricingPlanInfo;
 };
 
-/**
- * Hotel Lobby AI catalog. A duet video costs a fixed number of credits
- * (see ./hotel-lobby-pricing.ts — 440 at the default 8s reference video), and
- * every pack holds a whole number of videos.
- *
- * Pricing floor: no product may sell credits below $0.01 each, so every
- * video is sold at ≥ 7× its fal cost. That is why there are no discounted
- * yearly plans — check priceInCents / credits ≥ 0.01 before adding a product.
- * Keys MUST match what the pricing UI sends as product_id.
+/** One-time packs grant exactly 1, 3 or 5 fixed-format videos. Monthly plans
+ * retain their existing terms. Product IDs remain stable for payment history.
  */
 export const pricingCatalog: Record<string, PricingProduct> = {
   pack_starter: {
     productId: 'pack_starter',
     productName: 'Starter Pack',
     planName: 'Starter Pack',
-    description: 'Starter Pack',
+    description: '1 rap video',
     type: PaymentType.ONE_TIME,
-    // $9.90 for two 8 s videos (≈ 7× fal cost after PayPal fees); was
-    // $5 / 440 until 2026-10-03 — compare paid starter orders per day.
     priceInCents: 990,
     currency: 'usd',
-    credits: 880,
+    credits: 440,
+    videoCount: 1,
   },
   pack_standard: {
     productId: 'pack_standard',
     productName: 'Standard Pack',
     planName: 'Standard Pack',
-    description: 'Standard Pack',
+    description: '3 rap videos',
     type: PaymentType.ONE_TIME,
-    priceInCents: 2300,
+    priceInCents: 1990,
     currency: 'usd',
-    credits: 2200,
+    credits: 1320,
+    videoCount: 3,
   },
   pack_pro: {
     productId: 'pack_pro',
     productName: 'Pro Pack',
     planName: 'Pro Pack',
-    description: 'Pro Pack',
+    description: '5 rap videos',
     type: PaymentType.ONE_TIME,
-    priceInCents: 4400,
+    priceInCents: 2990,
     currency: 'usd',
-    credits: 4400,
+    credits: 2200,
+    videoCount: 5,
   },
   basic_monthly: {
     productId: 'basic_monthly',
@@ -126,4 +123,14 @@ export function getPricingProduct(productId: string): PricingProduct | null {
 
 export function listPricingProducts(): PricingProduct[] {
   return Object.values(pricingCatalog);
+}
+
+/** Resolve bundle credits from the same per-video price generation consumes. */
+export function resolveProductCredits(
+  product: PricingProduct,
+  configs: Record<string, string> = {}
+) {
+  return product.videoCount === undefined
+    ? product.credits
+    : product.videoCount * resolveDuetCredits(configs);
 }

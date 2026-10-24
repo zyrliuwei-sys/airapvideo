@@ -17,6 +17,11 @@ import {
   type PaymentSession,
 } from './types';
 
+/** Accept both the admin setting and the environment variable spelling. */
+export function paypalEnvironment(value?: string): 'production' | 'sandbox' {
+  return value === 'live' || value === 'production' ? 'production' : 'sandbox';
+}
+
 /**
  * PayPal payment provider configs
  * @docs https://developer.paypal.com/docs/
@@ -149,8 +154,11 @@ export class PayPalProvider implements PaymentProvider {
     );
 
     const approvalUrl = result.links?.find(
-      (link: any) => link.rel === 'approve'
+      (link: any) => link.rel === 'approve' || link.rel === 'payer-action'
     )?.href;
+
+    if (!result.id || !approvalUrl)
+      throw new Error('PayPal did not return a valid checkout link');
 
     return {
       provider: this.name,
@@ -282,7 +290,7 @@ export class PayPalProvider implements PaymentProvider {
     );
 
     const approvalUrl = subscriptionResponse.links?.find(
-      (link: any) => link.rel === 'approve'
+      (link: any) => link.rel === 'approve' || link.rel === 'payer-action'
     )?.href;
 
     return {
@@ -677,7 +685,7 @@ export class PayPalProvider implements PaymentProvider {
 
     const data = await response.json();
 
-    if (data.error) {
+    if (!response.ok || data.error || typeof data.access_token !== 'string') {
       throw new Error(
         `PayPal authentication failed: ${data.error_description}`
       );
@@ -895,7 +903,12 @@ export class PayPalProvider implements PaymentProvider {
 
     const result: PaymentSession = {
       provider: this.name,
-      paymentStatus: this.mapPayPalStatus(order.status),
+      // A completed order may still contain a pending capture. Grant access
+      // only when the actual capture is complete.
+      paymentStatus: this.mapPayPalStatus(
+        capture?.status ||
+          (order.status === 'COMPLETED' ? 'PENDING' : order.status)
+      ),
       paymentInfo: {
         transactionId: order.id,
         discountCode: '', // PayPal doesn't have promotion codes like Stripe

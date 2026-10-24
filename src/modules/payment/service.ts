@@ -6,6 +6,7 @@ import {
   AlipayProvider,
   CreemProvider,
   PaymentManager,
+  paypalEnvironment,
   PayPalProvider,
   StripeProvider,
   WaffoProvider,
@@ -131,8 +132,7 @@ async function getPaymentManager(): Promise<PaymentManager> {
       new PayPalProvider({
         clientId: c('paypal_client_id'),
         clientSecret: c('paypal_client_secret'),
-        environment:
-          c('paypal_environment') === 'live' ? 'production' : 'sandbox',
+        environment: paypalEnvironment(c('paypal_environment')),
         webhookId: c('paypal_webhook_id') || undefined,
       }),
       isDefault

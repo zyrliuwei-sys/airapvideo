@@ -35,12 +35,14 @@ const PaymentProviderModal = lazy(() =>
   }))
 );
 
-// $9.9 rather than $9.90; whole dollars stay $23.
-function usd(cents: number) {
-  return `$${(cents / 100).toLocaleString('en-US', {
+function formatPrice(cents: number, currency: string) {
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: currency.toUpperCase(),
+    currencyDisplay: 'narrowSymbol',
     minimumFractionDigits: 0,
     maximumFractionDigits: 2,
-  })}`;
+  }).format(cents / 100);
 }
 
 const ALL_PROVIDERS: PaymentProvider[] = [
@@ -102,7 +104,23 @@ export function Pricing({
   });
   const perVideo = priceData?.credits ?? duetCredits();
 
-  function features(credits: number, extra: PricingFeature[]) {
+  function features(
+    credits: number,
+    extra: PricingFeature[],
+    videoCount?: number
+  ) {
+    if (videoCount !== undefined)
+      return [
+        {
+          icon: Film,
+          label:
+            videoCount === 1
+              ? m['landing.pricing.feature_one_video']()
+              : m['landing.pricing.feature_video_count']({ count: videoCount }),
+        },
+        { icon: MonitorPlay, label: m['landing.pricing.feature_hd']() },
+        ...extra,
+      ];
     return [
       {
         icon: Sparkles,
@@ -143,10 +161,11 @@ export function Pricing({
       id: productId,
       name: opts.name,
       description: yearly
-        ? `${opts.description} · ${m['landing.pricing.billed_yearly']({ price: usd(product.priceInCents) })}`
+        ? `${opts.description} · ${m['landing.pricing.billed_yearly']({ price: formatPrice(product.priceInCents, product.currency) })}`
         : opts.description,
-      price: usd(
-        yearly ? Math.round(product.priceInCents / 12) : product.priceInCents
+      price: formatPrice(
+        yearly ? Math.round(product.priceInCents / 12) : product.priceInCents,
+        product.currency
       ),
       originalPrice: opts.originalPrice,
       interval: interval ? m['landing.pricing.per_month']() : undefined,
@@ -154,7 +173,7 @@ export function Pricing({
       badge: opts.badge,
       plainFrame: opts.plainFrame,
       highlight: opts.highlight,
-      features: features(product.credits, opts.extra ?? []),
+      features: features(product.credits, opts.extra ?? [], product.videoCount),
       productId,
       priceInCents: product.priceInCents,
       currency: product.currency,

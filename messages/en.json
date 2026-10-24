@@ -781,7 +781,7 @@
   "landing.chips.cms": "CMS",
   "landing.chips.apikeys": "API Keys",
   "landing.pricing.title": "Pricing",
-  "landing.pricing.description": "Buy airapvideo credits once, no subscription needed. Credits are only spent when you render a rap video.",
+  "landing.pricing.description": "Choose a one-time pack for 1, 3 or 5 videos. Every video is 10 seconds in vertical 9:16.",
   "landing.pricing.feature_cancel": "Cancel anytime",
   "landing.pricing.feature_yearly_upfront": "All 12 months of credits upfront",
   "landing.pricing.feature_monthly_refill": "Credits refill every month",
@@ -1158,5 +1158,7 @@
   "studio.upload_hint": "One portrait each. We’ll take it from here.",
   "studio.about_audio": "About music & lip sync",
   "studio.example_note": "Your two photos become one performance. Your video will appear here.",
-  "studio.result_note": "Your stage and finished video appear here, ready to preview and download."
+  "studio.result_note": "Your stage and finished video appear here, ready to preview and download.",
+  "landing.pricing.feature_one_video": "1 rap video",
+  "landing.pricing.feature_video_count": "{count} rap videos"
 }
