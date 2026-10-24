@@ -1129,6 +1129,8 @@
   .rv-hero .rv-actions,
   .rv-hero .rv-hero-note,
   .rv-ideas-lede,
+  .rv-studio-consent,
+  .rv-studio-details,
   .rv-d-only {
     display: none;
   }

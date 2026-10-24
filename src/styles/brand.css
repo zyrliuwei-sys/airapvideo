@@ -349,8 +349,8 @@
   .br-footer-top {
     display: flex;
     flex-wrap: wrap;
-    gap: 12px 20px;
-    margin-bottom: 24px;
+    gap: 20px 20px;
+    margin-bottom: 28px;
   }
   .br-footer-brand {
     flex-basis: 100%;
