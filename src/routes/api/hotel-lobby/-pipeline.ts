@@ -1,27 +1,28 @@
 /**
- * Hotel Lobby duet pipeline (two fal calls chained by polling):
- *
- *   1. openai/gpt-image-2/edit  — two portraits → one orange-booth scene
- *   2. fal-ai/bytedance/dreamactor/v2 — scene + reference performance video
- *      → motion and audio transferred onto the two people
- *
- * The task row's status doubles as the stage: `pending` = scene image in
- * flight, `processing` = motion transfer in flight. Moving pending→processing
- * is claimed atomically so concurrent polls never submit step 2 twice.
- *
- * Polls come from the browser while the page is open and from the
- * every-minute cron sweep (`/api/hotel-lobby/cron`), so a task finishes even
- * if the buyer closes the tab. Finished videos are copied to R2 because fal
- * media URLs are temporary.
+ * Two-stage duet pipeline. New jobs use EvoLink Nano Banana → MiniMax H3
+ * Max Turbo. Existing Fal jobs retain their original models and inputs.
+ * Browser polls and the cron sweep advance stages; an atomic claim prevents
+ * duplicate video submissions. Failed jobs refund their consumed credits.
  */
 
-import { AIMediaType, FalProvider, AITaskStatus as FalStatus } from '@/core/ai';
+import {
+  AIMediaType,
+  EVOLINK_IMAGE_MODEL,
+  EVOLINK_VIDEO_MODEL,
+  EvolinkProvider,
+  EvolinkRequestError,
+  FalProvider,
+  AITaskStatus as FalStatus,
+} from '@/core/ai';
 import { envConfigs } from '@/config';
-import { type DuetLength } from '@/config/hotel-lobby-pricing';
+import {
+  DEFAULT_DUET_LENGTH,
+  DUET_LENGTHS,
+  type DuetLength,
+} from '@/config/hotel-lobby-pricing';
 import {
   DEFAULT_DUET_SIZE,
   DUET_SIZES,
-  isDuetSize,
   type DuetSize,
 } from '@/config/hotel-lobby-sizes';
 import {
@@ -42,7 +43,38 @@ export const IMAGE_MODEL = 'openai/gpt-image-2/edit';
 export const VIDEO_MODEL = 'fal-ai/bytedance/dreamactor/v2';
 export const PIPELINE_MODEL = 'hotel-lobby-duet';
 
-export const SCENE_PROMPT = `Create a studio portrait using the two uploaded people.
+export type DuetProvider = FalProvider | EvolinkProvider;
+
+/** New jobs always use EvoLink; the provider persisted on old jobs is honored. */
+export function duetProvider(
+  configs: Record<string, string>,
+  name = 'evolink'
+): DuetProvider {
+  if (name === 'fal') {
+    if (!configs.fal_api_key) throw new Error('Fal API key is not configured');
+    return new FalProvider({ apiKey: configs.fal_api_key });
+  }
+  if (name !== 'evolink') throw new Error('Unsupported duet provider');
+  return new EvolinkProvider({
+    apiKey: configs.evolink_api_key,
+    baseUrl: configs.evolink_base_url,
+  });
+}
+
+export function videoQuality(configs: Record<string, string>): '480p' | '768p' {
+  return configs.evolink_video_quality === '480p' ? '480p' : '768p';
+}
+
+export function buildPerformancePrompt(length: DuetLength) {
+  return `Animate the two people in the first frame into a ${DUET_LENGTHS[length]}-second original rap duet music video.
+Preserve both identities, faces, outfits, left/right positions, the centered hanging microphone and the orange studio background throughout.
+The left performer leads an upbeat original English rap verse; the right performer answers with short hype lines. Use expressive natural mouth movements synchronized to their own audible vocals, rhythmic head nods and restrained hand gestures.
+Audio direction: an original punchy hip-hop instrumental with drums, bass and a clear rhythmic beat, with intelligible original rap vocals above the music. Match each visible performer's mouth to the syllables of their own voice. No borrowed song or voice imitation.
+Keep a continuous static camera and the source framing, with both people visible. No cuts, identity changes, extra people, subtitles or logos.`;
+}
+
+export const SCENE_PROMPT = `Extract the main person from each uploaded photo, removing both original backgrounds and all other people.
+Composite exactly these two people into one photorealistic studio portrait. Do not make a collage or duplicate either person.
 Keep Subject A fixed on the left side and Subject B fixed on the right side.
 They should face each other naturally, with one hanging microphone vertically centered exactly between them at face level.
 {{FRAMING}}
@@ -102,11 +134,10 @@ export function parseSceneInput(body: any) {
   }
   return {
     photos: photos as string[],
-    direction:
-      typeof body?.direction === 'string'
-        ? (body.direction as string)
-        : undefined,
-    size: isDuetSize(body?.size) ? body.size : DEFAULT_DUET_SIZE,
+    // All creative instructions are supplied by the system prompt.
+    direction: undefined,
+    // New requests always use the fixed vertical composition.
+    size: DEFAULT_DUET_SIZE,
   };
 }
 
@@ -150,35 +181,51 @@ export const REFINE_PROMPT = `Re-render this exact image at high quality.
 Keep the same two people with the same faces, hairstyles, clothing, poses and left/right positions, the same hanging microphone, framing and burnt-orange background.
 Only increase detail, sharpness and lighting quality. Do not add, remove or move anything.`;
 
-/** Step 1: two portraits → one orange-booth scene. Returns the fal id. */
+/** Step 1: two portraits → one orange-booth scene. Returns the provider task id. */
 export async function submitScene(
-  provider: FalProvider,
+  provider: DuetProvider,
   photos: string[],
   prompt: string,
   size: DuetSize,
   quality: SceneQuality = 'medium'
 ) {
+  // EvoLink requires public reference URLs, not browser data URIs. Keep them
+  // out of task rows and logs; its file service expires input uploads after 72h.
+  const references =
+    provider instanceof EvolinkProvider
+      ? await Promise.all(
+          photos.map((photo) =>
+            photo.startsWith('data:') ? provider.uploadImage(photo) : photo
+          )
+        )
+      : photos;
   const image = await provider.generate({
     params: {
       mediaType: AIMediaType.IMAGE,
-      model: IMAGE_MODEL,
+      model: provider.name === 'evolink' ? EVOLINK_IMAGE_MODEL : IMAGE_MODEL,
       prompt,
-      options: {
-        image_urls: photos,
-        image_size: sceneSize(size),
-        quality,
-        output_format: 'jpeg',
-      },
+      options:
+        provider.name === 'evolink'
+          ? {
+              image_urls: references,
+              size: size === 'full' ? '9:16' : size,
+            }
+          : {
+              image_urls: references,
+              image_size: sceneSize(size),
+              quality,
+              output_format: 'jpeg',
+            },
     },
   });
   return image.taskId;
 }
 
 /** Poll step 1. Resolves the scene URL once ready, null while running. */
-export async function queryScene(provider: FalProvider, requestId: string) {
+export async function queryScene(provider: DuetProvider, requestId: string) {
   const res = await provider.query({
     taskId: requestId,
-    model: IMAGE_MODEL,
+    model: provider.name === 'evolink' ? EVOLINK_IMAGE_MODEL : IMAGE_MODEL,
     mediaType: AIMediaType.IMAGE,
   });
   if (res.taskStatus === FalStatus.FAILED) {
@@ -196,9 +243,14 @@ export async function queryScene(provider: FalProvider, requestId: string) {
  */
 export async function submitMotion(
   taskId: string,
-  provider: FalProvider,
+  provider: DuetProvider,
   sceneImageUrl: string,
-  motionVideoUrl: string
+  motionVideoUrl?: string,
+  performance: {
+    length?: DuetLength;
+    quality?: '480p' | '768p';
+    prompt?: string;
+  } = {}
 ) {
   await mergeTaskInfo(taskId, {
     sceneImageUrl,
@@ -208,26 +260,43 @@ export async function submitMotion(
   const video = await provider.generate({
     params: {
       mediaType: AIMediaType.VIDEO,
-      model: VIDEO_MODEL,
-      prompt: '',
-      options: {
-        image_url: sceneImageUrl,
-        video_url: motionVideoUrl,
-        trim_first_second: true,
-      },
+      model: provider.name === 'evolink' ? EVOLINK_VIDEO_MODEL : VIDEO_MODEL,
+      prompt:
+        provider.name === 'evolink'
+          ? performance.prompt ||
+            buildPerformancePrompt(performance.length || DEFAULT_DUET_LENGTH)
+          : '',
+      options:
+        provider.name === 'evolink'
+          ? {
+              image_start: sceneImageUrl,
+              duration: DUET_LENGTHS[performance.length || DEFAULT_DUET_LENGTH],
+              quality: performance.quality || '768p',
+            }
+          : {
+              image_url: sceneImageUrl,
+              video_url: motionVideoUrl,
+              trim_first_second: true,
+            },
     },
   });
   await mergeTaskInfo(taskId, { videoRequestId: video.taskId });
 }
 
 type Info = {
+  emailProvided?: boolean;
   imageRequestId?: string;
+  sceneClaimedAt?: number;
   videoRequestId?: string;
   sceneImageUrl?: string;
   motionVideoUrl?: string;
   error?: string;
   persistAttempts?: number;
   motionClaimedAt?: number;
+  length?: DuetLength;
+  quality?: '480p' | '768p';
+  videoPrompt?: string;
+  videoPersisted?: boolean;
 };
 
 function parseJson<T>(value: unknown): T {
@@ -245,6 +314,7 @@ export function taskView(task: any) {
   );
   return {
     id: task.id as string,
+    emailProvided: info.emailProvided ?? false,
     status: task.status as AITaskStatus,
     stage:
       task.status === AITaskStatus.PENDING
@@ -258,27 +328,22 @@ export function taskView(task: any) {
   };
 }
 
-function isFalUrl(url: string) {
-  try {
-    return new URL(url).hostname.endsWith('fal.media');
-  } catch {
-    return false;
-  }
-}
-
 /**
- * Copy a finished fal video to R2 and return the task result pointing at the
- * permanent copy. The fal URL is dropped so the `%fal.media%` backfill sweep
- * only matches videos that still need copying. Returns the result
- * unchanged when storage isn't configured or the copy fails — the video stays
- * playable from fal until a later sweep retries.
+ * Copy provider videos to R2 before their temporary URLs expire. A marker
+ * excludes durable results from the retry sweep. Storage outages leave the
+ * provider URL playable while the cron retries the copy.
  */
 export async function persistVideo(taskId: string, taskResult: any) {
   const url: string | undefined = taskResult?.video?.url;
-  if (!url || !isFalUrl(url)) return taskResult;
+  if (!url || taskResult.video.persisted) return taskResult;
   try {
     const storage = await getStorage();
     if (!storage) return taskResult;
+    if (
+      storage.getPublicUrl({ key: `hotel-lobby/videos/${taskId}.mp4` }) === url
+    ) {
+      return { ...taskResult, video: { ...taskResult.video, persisted: true } };
+    }
     const uploaded = await storage.downloadAndUpload({
       url,
       key: `hotel-lobby/videos/${taskId}.mp4`,
@@ -291,7 +356,7 @@ export async function persistVideo(taskId: string, taskResult: any) {
     }
     return {
       ...taskResult,
-      video: { ...taskResult.video, url: uploaded.url },
+      video: { ...taskResult.video, url: uploaded.url, persisted: true },
     };
   } catch (error) {
     console.error('persistVideo failed', taskId, error);
@@ -301,7 +366,7 @@ export async function persistVideo(taskId: string, taskResult: any) {
 
 /**
  * Retry the R2 copy for an already-finished task (backfill / earlier copy
- * failed). Gives up after a few tries so an expired fal URL isn't retried
+ * failed). Gives up after a few tries so an expired provider URL isn't retried
  * forever.
  */
 export async function repersistTask(task: {
@@ -317,6 +382,7 @@ export async function repersistTask(task: {
   const result = parseJson<any>(task.taskResult);
   const stored = await persistVideo(task.id, result);
   if (stored === result) return false;
+  await mergeTaskInfo(task.id, { videoPersisted: true });
   await updateTask({
     taskId: task.id,
     status: AITaskStatus.SUCCESS,
@@ -326,17 +392,21 @@ export async function repersistTask(task: {
 }
 
 /**
- * A poll that hit fal's rate limit, a 5xx or the network says nothing about
+ * A poll that hit a provider rate limit, a 5xx or the network says nothing about
  * the run itself — it is usually still going, so check again on the next poll
  * instead of failing a job that's already being paid for. Tasks still stuck
  * get failed (and refunded) by the cron timeout.
  */
 function isTransient(error: any) {
+  if (error instanceof EvolinkRequestError)
+    return error.status === 429 || error.status >= 500;
   const message = String(error?.message || '');
   const status = /request failed with status: (\d{3})/.exec(message)?.[1];
   if (status) return status === '429' || Number(status) >= 500;
   return (
     error instanceof TypeError ||
+    error?.name === 'TimeoutError' ||
+    error?.name === 'AbortError' ||
     /network|fetch failed|timed? ?out|ECONN|socket/i.test(message)
   );
 }
@@ -345,7 +415,21 @@ function isTransient(error: any) {
 // nothing will ever finish it, so fail and refund instead of a 3 h wait.
 const MOTION_SUBMIT_TIMEOUT_MS = 10 * 60 * 1000;
 
-async function fail(taskId: string, message: string) {
+export async function failPipelineTask(taskId: string, message: string) {
+  // Only one poll/cron may fail and refund an active task. A late response
+  // cannot turn a completed task into a failure or trigger a second refund.
+  const claimed =
+    (await claimTaskStatus(
+      taskId,
+      AITaskStatus.PENDING,
+      AITaskStatus.FAILED
+    )) ||
+    (await claimTaskStatus(
+      taskId,
+      AITaskStatus.PROCESSING,
+      AITaskStatus.FAILED
+    ));
+  if (!claimed) return;
   await updateTask({
     taskId,
     status: AITaskStatus.FAILED,
@@ -356,25 +440,45 @@ async function fail(taskId: string, message: string) {
 /**
  * Advance a pipeline task by one poll. Safe to call repeatedly/concurrently.
  */
-export async function advance(taskId: string, provider: FalProvider) {
+export async function advance(taskId: string, provider: DuetProvider) {
   let task = await findTask(taskId);
   if (!task) throw new Error('Task not found');
   const info = parseJson<Info>(task.taskInfo);
 
   try {
+    if (
+      (task.status === AITaskStatus.PENDING ||
+        task.status === AITaskStatus.PROCESSING) &&
+      Date.now() - new Date(task.createdAt).getTime() > 3 * 60 * 60 * 1000
+    ) {
+      await failPipelineTask(taskId, 'Generation timed out');
+      return taskView((await findTask(taskId))!);
+    }
+    if (
+      task.status === AITaskStatus.PENDING &&
+      !info.imageRequestId &&
+      Date.now() - (info.sceneClaimedAt || new Date(task.createdAt).getTime()) >
+        MOTION_SUBMIT_TIMEOUT_MS
+    ) {
+      await failPipelineTask(taskId, 'Scene generation was never started');
+      return taskView((await findTask(taskId))!);
+    }
     // Stage 1: scene image
     if (task.status === AITaskStatus.PENDING && info.imageRequestId) {
       const res = await provider.query({
         taskId: info.imageRequestId,
-        model: IMAGE_MODEL,
+        model: provider.name === 'evolink' ? EVOLINK_IMAGE_MODEL : IMAGE_MODEL,
         mediaType: AIMediaType.IMAGE,
       });
       if (res.taskStatus === FalStatus.FAILED) {
-        await fail(taskId, 'Scene image generation failed');
+        await failPipelineTask(taskId, 'Scene image generation failed');
       } else if (res.taskStatus === FalStatus.SUCCESS) {
         const sceneImageUrl = res.taskInfo?.images?.[0]?.imageUrl;
         if (!sceneImageUrl) {
-          await fail(taskId, 'Scene image generation returned no image');
+          await failPipelineTask(
+            taskId,
+            'Scene image generation returned no image'
+          );
         } else if (
           await claimTaskStatus(
             taskId,
@@ -382,15 +486,20 @@ export async function advance(taskId: string, provider: FalProvider) {
             AITaskStatus.PROCESSING
           )
         ) {
-          // A failed submit is final, network error or not: no fal job was
+          // A failed submit is final, network error or not: no provider job was
           // (knowingly) started, so refund now rather than wait it out.
           await submitMotion(
             taskId,
             provider,
             sceneImageUrl,
-            info.motionVideoUrl!
+            info.motionVideoUrl,
+            {
+              length: info.length,
+              quality: info.quality,
+              prompt: info.videoPrompt,
+            }
           ).catch((error) =>
-            fail(taskId, error?.message || 'Motion transfer failed')
+            failPipelineTask(taskId, error?.message || 'Motion transfer failed')
           );
         }
       }
@@ -400,16 +509,19 @@ export async function advance(taskId: string, provider: FalProvider) {
     else if (task.status === AITaskStatus.PROCESSING && info.videoRequestId) {
       const res = await provider.query({
         taskId: info.videoRequestId,
-        model: VIDEO_MODEL,
+        model: provider.name === 'evolink' ? EVOLINK_VIDEO_MODEL : VIDEO_MODEL,
         mediaType: AIMediaType.VIDEO,
       });
       if (res.taskStatus === FalStatus.FAILED) {
-        await fail(taskId, 'Motion transfer failed');
+        await failPipelineTask(taskId, 'Motion transfer failed');
       } else if (res.taskStatus === FalStatus.SUCCESS) {
+        const result = await persistVideo(taskId, res.taskResult);
+        if (result?.video?.persisted)
+          await mergeTaskInfo(taskId, { videoPersisted: true });
         await updateTask({
           taskId,
           status: AITaskStatus.SUCCESS,
-          taskResult: await persistVideo(taskId, res.taskResult),
+          taskResult: result,
         });
       }
     } else if (
@@ -417,13 +529,13 @@ export async function advance(taskId: string, provider: FalProvider) {
       info.motionClaimedAt &&
       Date.now() - info.motionClaimedAt > MOTION_SUBMIT_TIMEOUT_MS
     ) {
-      await fail(taskId, 'Motion transfer was never started');
+      await failPipelineTask(taskId, 'Motion transfer was never started');
     }
   } catch (error: any) {
     // fal reports a failed run as COMPLETED + an error on the result fetch;
     // a rate limit / outage / network blip is retried on the next poll.
     if (!isTransient(error)) {
-      await fail(taskId, error?.message || 'Generation failed');
+      await failPipelineTask(taskId, error?.message || 'Generation failed');
     }
   }
 
@@ -434,7 +546,7 @@ export async function advance(taskId: string, provider: FalProvider) {
 type PreviewRow = NonNullable<Awaited<ReturnType<typeof findPreview>>>;
 
 /** Advance a pending free preview by one poll (browser or cron sweep). */
-export async function advancePreview(row: PreviewRow, provider: FalProvider) {
+export async function advancePreview(row: PreviewRow, provider: DuetProvider) {
   if (row.status !== PreviewStatus.PENDING || !row.requestId) return;
   try {
     const url = await queryScene(provider, row.requestId);

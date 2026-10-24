@@ -1,42 +1,54 @@
 import { createFileRoute } from '@tanstack/react-router';
+import { z } from 'zod';
 
-import { AIMediaType, FalProvider } from '@/core/ai';
-import { getAuth } from '@/core/auth';
+import { AIMediaType } from '@/core/ai';
+import { assertVideoOrigin, getVideoActor } from '@/core/auth/video-actor';
 import {
   DEFAULT_DUET_LENGTH,
-  isDuetLength,
   resolveDuetCreditsFor,
 } from '@/config/hotel-lobby-pricing';
 import {
   AITaskStatus,
   createTask,
   mergeTaskInfo,
-  updateTask,
 } from '@/modules/ai-tasks/service';
 import { getAllConfigs } from '@/modules/config/service';
 import { screenPrompt } from '@/modules/content-safety/service';
 import { getBalance } from '@/modules/credits/service';
 import { hasPermission } from '@/modules/rbac/service';
+import { createPurchase, lastContact } from '@/modules/video-purchases/service';
 import { respData, respErr } from '@/lib/resp';
+import { getLocale } from '@/paraglide/runtime.js';
 
 import { DIRECTION_BLOCKED, isBlockedDirection } from './-direction-filter';
 import {
+  buildPerformancePrompt,
   buildScenePrompt,
-  motionVideoFor,
+  duetProvider,
+  failPipelineTask,
   parseSceneInput,
   PIPELINE_MODEL,
   submitScene,
   taskView,
+  videoQuality,
   videoSceneQuality,
 } from './-pipeline';
+import { readVideoBody } from './-purchase';
 
 async function POST({ request }: { request: Request }) {
   try {
-    const auth = getAuth();
-    const session = await auth.api.getSession({ headers: request.headers });
-    if (!session?.user) return respErr('Unauthorized');
+    assertVideoOrigin(request);
+    const actor = await getVideoActor(request);
+    if (!actor.userId) return respErr('Insufficient credits');
 
-    const body = await request.json();
+    const body = await readVideoBody(request);
+    const email = z
+      .union([z.literal(''), z.email().max(191)])
+      .parse(
+        typeof body.email === 'string'
+          ? body.email.trim().toLowerCase()
+          : await lastContact(actor.userId)
+      );
     const input = parseSceneInput(body);
     if (!input) return respErr('Two JPG, PNG or WebP photos are required');
     if (isBlockedDirection(input.direction)) {
@@ -49,33 +61,42 @@ async function POST({ request }: { request: Request }) {
       return respErr(DIRECTION_BLOCKED);
     }
 
-    // Admins generate free; everyone else pays 7× the fal cost in credits.
+    // Admins generate free; everyone else uses the configured credit price.
     // Checked first so an unpaid user always lands on the paywall.
-    const isAdmin = await hasPermission(session.user.id, 'admin.*');
-    const length = isDuetLength(body?.length)
-      ? body.length
-      : DEFAULT_DUET_LENGTH;
+    const isAdmin = await hasPermission(actor.userId, 'admin.*');
+    const length = DEFAULT_DUET_LENGTH;
     const price = resolveDuetCreditsFor(configs, length);
-    if (!isAdmin && (await getBalance(session.user.id)) < price) {
+    if (!isAdmin && (await getBalance(actor.userId)) < price) {
       return respErr('Insufficient credits');
     }
 
-    if (!configs.fal_api_key) return respErr('Generation is not configured');
-    const motionVideoUrl = motionVideoFor(configs, length);
-    if (!motionVideoUrl) return respErr('Reference video is not configured');
+    const provider = duetProvider(configs);
 
     const prompt = buildScenePrompt(direction, size);
     const task = await createTask({
-      userId: session.user.id,
+      userId: actor.userId,
       mediaType: AIMediaType.VIDEO,
-      provider: 'fal',
+      provider: 'evolink',
       model: PIPELINE_MODEL,
       prompt,
       costCredits: isAdmin ? 0 : price,
     });
 
     try {
-      const provider = new FalProvider({ apiKey: configs.fal_api_key });
+      await createPurchase({
+        userId: actor.userId,
+        email,
+        locale: getLocale(),
+        input: '{}',
+        taskId: task.id,
+      });
+      await mergeTaskInfo(task.id, {
+        emailProvided: !!email,
+        sceneClaimedAt: Date.now(),
+        length,
+        quality: videoQuality(configs),
+        videoPrompt: buildPerformancePrompt(length),
+      });
       const imageRequestId = await submitScene(
         provider,
         photos,
@@ -83,13 +104,9 @@ async function POST({ request }: { request: Request }) {
         size,
         videoSceneQuality(configs)
       );
-      await mergeTaskInfo(task.id, { imageRequestId, motionVideoUrl });
+      await mergeTaskInfo(task.id, { imageRequestId });
     } catch (error: any) {
-      await updateTask({
-        taskId: task.id,
-        status: AITaskStatus.FAILED,
-        taskResult: { error: error?.message },
-      });
+      await failPipelineTask(task.id, error?.message || 'Generation failed');
       throw error;
     }
 

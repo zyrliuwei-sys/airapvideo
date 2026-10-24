@@ -4,6 +4,8 @@ import { getAllConfigs } from '@/modules/config/service';
 import { recordPaymentSuccess } from '@/modules/events/service';
 import { handlePaymentCallback } from '@/modules/payment/service';
 
+import { startPaidPurchases } from '../hotel-lobby/-purchase';
+
 /**
  * GET /api/payment/callback?order_no=xxx&redirect=xxx
  *
@@ -39,6 +41,7 @@ async function GET({ request }: { request: Request }) {
   try {
     if (orderNo) {
       await handlePaymentCallback(orderNo);
+      await startPaidPurchases();
       // Ties the paying visitor (cookie) to the order. Revenue on the
       // dashboard comes from the order table, so webhook-only payments
       // still count.

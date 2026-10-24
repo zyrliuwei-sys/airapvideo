@@ -731,3 +731,32 @@ export const trafficDaily = table(
 
 export type TrafficDaily = typeof trafficDaily.$inferSelect;
 export type NewTrafficDaily = typeof trafficDaily.$inferInsert;
+
+// Paid video drafts survive checkout, browser closure, and webhook retries.
+export const videoPurchase = table(
+  'video_purchase',
+  {
+    id: text('id').primaryKey(),
+    userId: text('user_id')
+      .notNull()
+      .references(() => user.id, { onDelete: 'cascade' }),
+    orderNo: text('order_no').unique(),
+    email: text('email').notNull().default(''),
+    locale: text('locale').notNull().default('en'),
+    input: text('input').notNull(),
+    status: text('status').notNull().default('draft'),
+    taskId: text('task_id').unique(),
+    error: text('error'),
+    emailSentAt: timestamp('email_sent_at'),
+    emailClaimedAt: timestamp('email_claimed_at'),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+  },
+  (t) => [
+    index('idx_video_purchase_user').on(t.userId, t.createdAt),
+    index('idx_video_purchase_email').on(t.email),
+    index('idx_video_purchase_status').on(t.status, t.createdAt),
+  ]
+);
+
+export type VideoPurchase = typeof videoPurchase.$inferSelect;
+export type NewVideoPurchase = typeof videoPurchase.$inferInsert;

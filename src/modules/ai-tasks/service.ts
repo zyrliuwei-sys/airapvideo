@@ -35,11 +35,12 @@ export async function createTask(params: {
   prompt: string;
   costCredits?: number;
   options?: any;
+  tx?: any;
 }): Promise<any> {
   const { userId, mediaType, provider, model, prompt, costCredits, options } =
     params;
 
-  return db().transaction(async (tx: any) => {
+  const run = async (tx: any) => {
     // 1. Insert task
     const taskData: any = {
       id: getUuid(),
@@ -81,7 +82,8 @@ export async function createTask(params: {
     }
 
     return task;
-  });
+  };
+  return params.tx ? run(params.tx) : db().transaction(run);
 }
 
 /**
@@ -223,7 +225,7 @@ export async function listTasksByStatus(params: {
   statuses: string[];
   createdBefore?: Date;
   resultLike?: string;
-  infoNotLike?: string;
+  infoNotLike?: string | string[];
   limit?: number;
 }) {
   const {
@@ -243,9 +245,12 @@ export async function listTasksByStatus(params: {
         inArray(aiTask.status, statuses),
         createdBefore ? lt(aiTask.createdAt, createdBefore) : undefined,
         resultLike ? like(aiTask.taskResult, resultLike) : undefined,
-        infoNotLike
-          ? or(isNull(aiTask.taskInfo), notLike(aiTask.taskInfo, infoNotLike))
-          : undefined,
+        ...(infoNotLike
+          ? (Array.isArray(infoNotLike) ? infoNotLike : [infoNotLike]).map(
+              (pattern) =>
+                or(isNull(aiTask.taskInfo), notLike(aiTask.taskInfo, pattern))
+            )
+          : []),
         isNull(aiTask.deletedAt)
       )
     )

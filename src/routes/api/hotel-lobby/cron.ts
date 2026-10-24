@@ -2,11 +2,7 @@ import { createFileRoute } from '@tanstack/react-router';
 
 import { FalProvider } from '@/core/ai';
 import { envConfigs } from '@/config';
-import {
-  AITaskStatus,
-  listTasksByStatus,
-  updateTask,
-} from '@/modules/ai-tasks/service';
+import { AITaskStatus, listTasksByStatus } from '@/modules/ai-tasks/service';
 import { getAllConfigs } from '@/modules/config/service';
 import {
   listPendingPreviews,
@@ -18,9 +14,12 @@ import { respData, respErr } from '@/lib/resp';
 import {
   advance,
   advancePreview,
+  duetProvider,
+  failPipelineTask,
   PIPELINE_MODEL,
   repersistTask,
 } from './-pipeline';
+import { deliverVideoEmails, startPaidPurchases } from './-purchase';
 
 const CRON_KEY_HEADER = 'x-cron-key';
 
@@ -37,9 +36,9 @@ async function POST({ request }: { request: Request }) {
     return respErr('Unauthorized');
   }
 
+  await startPaidPurchases();
   const configs = await getAllConfigs();
-  if (!configs.fal_api_key) return respData({ skipped: true });
-  const provider = new FalProvider({ apiKey: configs.fal_api_key });
+
   const now = Date.now();
   const stats = { advanced: 0, timedOut: 0, persisted: 0, previews: 0 };
 
@@ -51,14 +50,10 @@ async function POST({ request }: { request: Request }) {
   for (const task of active) {
     try {
       if (now - new Date(task.createdAt).getTime() > TASK_TIMEOUT_MS) {
-        await updateTask({
-          taskId: task.id,
-          status: AITaskStatus.FAILED,
-          taskResult: { error: 'Generation timed out' },
-        });
+        await failPipelineTask(task.id, 'Generation timed out');
         stats.timedOut++;
       } else {
-        await advance(task.id, provider);
+        await advance(task.id, duetProvider(configs, task.provider));
         stats.advanced++;
       }
     } catch (error) {
@@ -69,8 +64,8 @@ async function POST({ request }: { request: Request }) {
   const unsaved = await listTasksByStatus({
     model: PIPELINE_MODEL,
     statuses: [AITaskStatus.SUCCESS],
-    resultLike: '%fal.media%',
-    infoNotLike: '%"persistAttempts":3%',
+    resultLike: '%"video"%',
+    infoNotLike: ['%"videoPersisted":true%', '%"persistAttempts":3%'],
     limit: 3,
   });
   for (const task of unsaved) {
@@ -86,7 +81,11 @@ async function POST({ request }: { request: Request }) {
           error: 'Preview timed out',
         });
       } else {
-        await advancePreview(row, provider);
+        if (configs.fal_api_key)
+          await advancePreview(
+            row,
+            new FalProvider({ apiKey: configs.fal_api_key })
+          );
       }
       stats.previews++;
     } catch (error) {
@@ -94,6 +93,7 @@ async function POST({ request }: { request: Request }) {
     }
   }
 
+  await deliverVideoEmails();
   return respData(stats);
 }
 

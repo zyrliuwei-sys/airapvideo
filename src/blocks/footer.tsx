@@ -31,7 +31,7 @@ export function Footer() {
             <a href={localizeHref('/#create')}>{m['hotel.nav.create']()}</a>
             <a href={localizeHref('/#guide')}>{m['rap.nav.guide']()}</a>
             <a href={localizeHref('/#how')}>{m['hotel.nav.how']()}</a>
-            <Link href="/settings/videos">{m['hotel.create.my_videos']()}</Link>
+            <Link href="/videos">{m['hotel.create.my_videos']()}</Link>
           </div>
           <div className="br-footer-col">
             <h2>{m['rap.footer.company']()}</h2>

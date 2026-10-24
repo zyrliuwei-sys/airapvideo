@@ -1,6 +1,7 @@
-import { and, desc, eq, isNull } from 'drizzle-orm';
+import { and, desc, eq, isNull, or } from 'drizzle-orm';
 
 import { db } from '@/core/db';
+import { withWriteTransaction } from '@/core/db/transaction';
 import {
   AlipayProvider,
   CreemProvider,
@@ -18,6 +19,7 @@ import {
   type PaymentEvent,
   type PaymentOrder,
 } from '@/core/payment/types';
+import { envConfigs } from '@/config';
 import { credit, order, subscription } from '@/config/db/schema';
 import { getAllConfigs } from '@/modules/config/service';
 import { calculateCreditExpirationTime } from '@/modules/credits/service';
@@ -190,7 +192,7 @@ export async function createCheckout(params: {
   planName?: string;
   credits?: number;
   creditsValidDays?: number;
-}): Promise<CheckoutSession> {
+}): Promise<CheckoutSession & { orderNo: string }> {
   const {
     userId,
     userEmail,
@@ -274,7 +276,7 @@ export async function createCheckout(params: {
       description: paymentOrder.description || '',
     });
 
-  return session;
+  return { ...session, orderNo };
 }
 
 // --- Payment callback (return_url) ---
@@ -396,12 +398,32 @@ async function handleCheckoutSuccess(session: any, provider: string) {
     };
 
     // Atomically update order + create subscription + grant credits
-    await db().transaction(async (tx: any) => {
+    await withWriteTransaction(async (tx: any) => {
+      // Webhook and browser return can arrive together. Claim the order in
+      // this transaction before granting anything; a failure rolls it back.
+      const isD1 = envConfigs.database_provider === 'd1';
+      const writes: any[] = [];
+      const claimed = isD1
+        ? [{ id: existingOrder.id }]
+        : await tx
+            .update(order)
+            .set({ status: OrderStatus.PAID })
+            .where(
+              and(
+                eq(order.id, existingOrder.id),
+                or(
+                  eq(order.status, OrderStatus.CREATED),
+                  eq(order.status, OrderStatus.PENDING)
+                )
+              )
+            )
+            .returning({ id: order.id });
+      if (!claimed.length) return;
       // 1. Create subscription if applicable
       if (subscriptionInfo && session.subscriptionId) {
-        const subNo = getSnowId();
+        const subNo = `SUB${existingOrder.id.replaceAll('-', '')}`;
         const newSub: any = {
-          id: getUuid(),
+          id: `sub_${existingOrder.id}`,
           subscriptionNo: subNo,
           userId: existingOrder.userId,
           userEmail:
@@ -427,7 +449,8 @@ async function handleCheckoutSuccess(session: any, provider: string) {
           paymentProductId: existingOrder.paymentProductId,
           paymentUserId: paymentInfo?.paymentUserId,
         };
-        await tx.insert(subscription).values(newSub);
+        const subWrite = tx.insert(subscription).values(newSub);
+        writes.push(isD1 ? subWrite.onConflictDoNothing() : subWrite);
         orderUpdate.subscriptionNo = subNo;
         orderUpdate.subscriptionId = session.subscriptionId;
         orderUpdate.subscriptionResult = JSON.stringify(
@@ -443,8 +466,8 @@ async function handleCheckoutSuccess(session: any, provider: string) {
           currentPeriodEnd: subscriptionInfo?.currentPeriodEnd,
         });
 
-        await tx.insert(credit).values({
-          id: getUuid(),
+        const creditWrite = tx.insert(credit).values({
+          id: `pay_${existingOrder.id}`,
           userId: existingOrder.userId,
           userEmail: existingOrder.userEmail || '',
           orderNo: existingOrder.orderNo,
@@ -461,13 +484,17 @@ async function handleCheckoutSuccess(session: any, provider: string) {
           expiresAt,
           status: 'active',
         });
+        writes.push(isD1 ? creditWrite.onConflictDoNothing() : creditWrite);
       }
 
       // 3. Update order
-      await tx
-        .update(order)
-        .set(orderUpdate)
-        .where(eq(order.id, existingOrder.id));
+      writes.push(
+        tx.update(order).set(orderUpdate).where(eq(order.id, existingOrder.id))
+      );
+      // D1 has no interactive transactions. Its native batch is atomic;
+      // deterministic grant/subscription IDs also make redelivery harmless.
+      if (isD1) await tx.batch(writes);
+      else for (const write of writes) await write;
     });
   } else if (
     session.paymentStatus === PaymentStatus.FAILED ||
@@ -479,7 +506,15 @@ async function handleCheckoutSuccess(session: any, provider: string) {
         status: OrderStatus.FAILED,
         paymentResult: JSON.stringify(session.paymentResult),
       })
-      .where(eq(order.id, existingOrder.id));
+      .where(
+        and(
+          eq(order.id, existingOrder.id),
+          or(
+            eq(order.status, OrderStatus.CREATED),
+            eq(order.status, OrderStatus.PENDING)
+          )
+        )
+      );
   }
 }
 

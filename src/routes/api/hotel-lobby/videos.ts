@@ -1,7 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router';
 
-import { getAuth } from '@/core/auth';
-import { getUserTasksPage } from '@/modules/ai-tasks/service';
+import { getVideoActor } from '@/core/auth/video-actor';
+import { listVideos } from '@/modules/video-purchases/service';
 import { respData, respErr } from '@/lib/resp';
 
 import { PIPELINE_MODEL, taskView } from './-pipeline';
@@ -9,10 +9,7 @@ import { PIPELINE_MODEL, taskView } from './-pipeline';
 // The signed-in user's duet videos, newest first (settings → My videos).
 async function GET({ request }: { request: Request }) {
   try {
-    const session = await getAuth().api.getSession({
-      headers: request.headers,
-    });
-    if (!session?.user) return respErr('Unauthorized');
+    const actor = await getVideoActor(request);
 
     const params = new URL(request.url).searchParams;
     const page = Math.max(1, Number(params.get('page')) || 1);
@@ -21,12 +18,12 @@ async function GET({ request }: { request: Request }) {
       Math.max(1, Number(params.get('pageSize')) || 12)
     );
 
-    const { items, total } = await getUserTasksPage({
-      userId: session.user.id,
-      model: PIPELINE_MODEL,
+    const { items, total } = await listVideos(
+      actor.access,
+      PIPELINE_MODEL,
       page,
-      pageSize,
-    });
+      pageSize
+    );
     return respData({
       items: items.map((task) => ({
         ...taskView(task),

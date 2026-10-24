@@ -71,7 +71,7 @@ export async function getAllConfigs(): Promise<ConfigMap> {
  * Ignored in production builds.
  */
 function getDevConfigOverrides(): ConfigMap {
-  if (!import.meta.env.DEV || typeof process === 'undefined') return {};
+  if (!import.meta.env?.DEV || typeof process === 'undefined') return {};
   const result: ConfigMap = {};
   for (const [key, value] of Object.entries(process.env)) {
     if (key.startsWith('CFG_') && value !== undefined) {

@@ -29,6 +29,7 @@ export function Header() {
 
   // Section links point at the homepage so they also work from inner pages.
   const links = [
+    { href: '/videos', label: m['hotel.create.my_videos']() },
     { href: '/#guide', label: m['rap.nav.guide']() },
     { href: '/#how', label: m['hotel.nav.how']() },
     { href: '/#pricing', label: m['hotel.nav.pricing']() },
@@ -60,6 +61,15 @@ export function Header() {
               {link.label}
             </a>
           ))}
+          {!user && (
+            <Link
+              className="br-nav-login"
+              href="/sign-in"
+              onClick={() => setOpen(false)}
+            >
+              {m['common.sign.sign_in_title']()}
+            </Link>
+          )}
         </nav>
         <div className="br-header-actions">
           {user ? (

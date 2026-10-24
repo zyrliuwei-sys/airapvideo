@@ -188,7 +188,7 @@ export function getSettingGroups(): SettingGroup[] {
       name: 'hotel_lobby',
       title: 'Rap video generator',
       description:
-        'Two photos → GPT Image 2 scene → DreamActor motion transfer (uses the Fal key)',
+        'Two photos → Nano Banana scene → MiniMax H3 Max Turbo video (uses the EvoLink key)',
       tab: 'ai',
     },
 
@@ -933,7 +933,7 @@ export function getSettings(): Setting[] {
     },
     {
       name: 'hotel_lobby_motion_video_url',
-      title: '8-second reference video URL',
+      title: 'Legacy Fal: 8-second reference video URL',
       type: 'text',
       placeholder:
         'Leave empty = /videos/hotel-lobby-reference.mp4 (shipped with the site; MP4, ≤30s, 9:16)',
@@ -942,7 +942,7 @@ export function getSettings(): Setting[] {
     },
     {
       name: 'hotel_lobby_motion_video_url_15',
-      title: '15-second reference video URL',
+      title: 'Legacy Fal: 15-second reference video URL',
       type: 'text',
       placeholder:
         'Leave empty = /videos/hotel-lobby-verse15.mp4 (the COLORS verse shipped with the site)',
@@ -959,7 +959,7 @@ export function getSettings(): Setting[] {
     },
     {
       name: 'hotel_lobby_video_seconds',
-      title: 'Reference video length (seconds)',
+      title: 'Legacy pricing reference length (seconds)',
       type: 'number',
       placeholder:
         '8 (default; set the real length if you change the video — prices each video at 7× fal cost)',
@@ -976,7 +976,7 @@ export function getSettings(): Setting[] {
     },
     {
       name: 'hotel_lobby_scene_quality',
-      title: 'Video frame quality',
+      title: 'Legacy Fal: video frame quality',
       type: 'select',
       options: [
         { label: 'Medium (default, ~38 s, ~$0.05)', value: 'medium' },
@@ -1001,6 +1001,20 @@ export function getSettings(): Setting[] {
       title: 'API Key',
       type: 'password',
       placeholder: 'sk-xxx',
+      group: 'evolink',
+      tab: 'ai',
+    },
+
+    {
+      name: 'evolink_video_quality',
+      title: 'MiniMax H3 Max Turbo resolution',
+      type: 'select',
+      options: [
+        { label: '768p (default)', value: '768p' },
+        { label: '480p', value: '480p' },
+      ],
+      defaultValue: '768p',
+      tip: 'New duet videos use Nano Banana followed by H3 Max Turbo image-to-video. Music and performance are requested through the prompt; this route cannot take a reference song or guarantee exact lip sync. Existing credit prices remain in effect; use the generator overrides to adjust them.',
       group: 'evolink',
       tab: 'ai',
     },

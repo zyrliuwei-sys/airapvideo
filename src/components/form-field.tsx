@@ -19,6 +19,7 @@ function fieldError(field: AnyFieldApi): string | null {
 // blur/change handlers and first-error display in one component.
 export function TextField({
   field,
+  id,
   label,
   type = 'text',
   placeholder,
@@ -27,6 +28,7 @@ export function TextField({
   disabled,
 }: {
   field: AnyFieldApi;
+  id?: string;
   label: string;
   type?: string;
   placeholder?: string;
@@ -38,9 +40,9 @@ export function TextField({
 
   return (
     <Field>
-      <FieldLabel htmlFor={field.name}>{label}</FieldLabel>
+      <FieldLabel htmlFor={id ?? field.name}>{label}</FieldLabel>
       <Input
-        id={field.name}
+        id={id ?? field.name}
         name={field.name}
         type={type}
         value={(field.state.value as string) ?? ''}

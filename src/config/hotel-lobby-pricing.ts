@@ -46,28 +46,28 @@ export function resolveDuetCredits(configs: Record<string, string>) {
 }
 
 /**
- * Video lengths offered in the generator. Each maps to its own reference
- * performance (8 s: the original clip; 15 s: a two-person verse from the
- * COLORS session) and is priced at 7× its own fal cost.
+ * New videos have a fixed 10-second duration. The legacy values are retained
+ * so polling an already-submitted task keeps its original duration.
  */
-export const DUET_LENGTHS = { '8': 8, '15': 15 } as const;
+// Older lengths remain readable for tasks that were already submitted.
+export const DUET_LENGTHS = { '8': 8, '10': 10, '15': 15 } as const;
 export type DuetLength = keyof typeof DUET_LENGTHS;
-export const DEFAULT_DUET_LENGTH: DuetLength = '8';
+export const DEFAULT_DUET_LENGTH = '10' as const satisfies DuetLength;
 
 export function isDuetLength(value: unknown): value is DuetLength {
   return typeof value === 'string' && value in DUET_LENGTHS;
 }
 
 /**
- * Credits for one video of the given length. 8 s keeps the existing admin
- * settings (hotel_lobby_credits / hotel_lobby_video_seconds); 15 s can be
- * overridden with hotel_lobby_credits_15.
+ * New 10-second videos keep the existing base credit price and admin override.
+ * Legacy 15-second pricing remains available for earlier tasks.
  */
 export function resolveDuetCreditsFor(
   configs: Record<string, string>,
   length: DuetLength
 ) {
-  if (length === '8') return resolveDuetCredits(configs);
+  if (length === '8' || length === DEFAULT_DUET_LENGTH)
+    return resolveDuetCredits(configs);
   const override = Number(configs.hotel_lobby_credits_15);
   if (Number.isFinite(override) && override > 0) return Math.ceil(override);
   return duetCredits(DUET_LENGTHS[length]);

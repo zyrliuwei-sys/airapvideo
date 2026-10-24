@@ -1,6 +1,5 @@
-'use client';
-
-import { lazy, Suspense, useMemo, useState } from 'react';
+import { lazy, Suspense, useId, useMemo, useState } from 'react';
+import { useForm } from '@tanstack/react-form';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import {
   CalendarClock,
@@ -11,9 +10,9 @@ import {
   XCircle,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { z } from 'zod';
 
 import { useSession } from '@/core/auth/client';
-import { useRouter } from '@/core/i18n/navigation';
 import { duetCredits } from '@/config/hotel-lobby-pricing';
 import { pricingCatalog } from '@/config/pricing';
 import { apiGet, apiPost } from '@/lib/api-client';
@@ -21,6 +20,7 @@ import { currentPathWithQuery } from '@/lib/redirect';
 import { track } from '@/lib/track';
 import { m } from '@/paraglide/messages.js';
 import { usePublicConfig } from '@/hooks/use-public-config';
+import { TextField } from '@/components/form-field';
 import type { PaymentProvider } from '@/components/payment-provider-modal';
 import {
   PricingTable,
@@ -56,14 +56,24 @@ export function Pricing({
   title,
   variant = 'section',
   asPageTitle = false,
+  prepareCheckout,
 }: {
   title?: string;
+  prepareCheckout?: (email: string) => Promise<string | undefined>;
   /** Render the heading as the page's H1 (standalone /pricing page). */
   asPageTitle?: boolean;
   /** `dialog` drops the page-section chrome for use inside a modal. */
   variant?: 'section' | 'dialog';
 } = {}) {
-  const router = useRouter();
+  const emailInputId = useId();
+  const emailForm = useForm({
+    defaultValues: { email: '' },
+    validators: {
+      onChange: z.object({
+        email: z.union([z.literal(''), z.email().max(191)]),
+      }),
+    },
+  });
   const { data: session } = useSession();
 
   const { data: configsData, refetch: refetchConfigs } = usePublicConfig();
@@ -91,7 +101,6 @@ export function Pricing({
     staleTime: 10 * 60_000,
   });
   const perVideo = priceData?.credits ?? duetCredits();
-  const perLongVideo = priceData?.lengths?.['15'] ?? duetCredits(15);
 
   function features(credits: number, extra: PricingFeature[]) {
     return [
@@ -103,16 +112,9 @@ export function Pricing({
       },
       {
         icon: Film,
-        label:
-          credits >= perLongVideo
-            ? m['landing.pricing.feature_videos_lengths']({
-                short: Math.floor(credits / perVideo),
-                long: Math.floor(credits / perLongVideo),
-              })
-            : m['landing.pricing.feature_videos_short_only']({
-                short: Math.floor(credits / perVideo),
-                credits: perLongVideo.toLocaleString('en-US'),
-              }),
+        label: m['landing.pricing.feature_videos_fixed']({
+          count: Math.floor(credits / perVideo),
+        }),
       },
       { icon: MonitorPlay, label: m['landing.pricing.feature_hd']() },
       ...extra,
@@ -227,14 +229,22 @@ export function Pricing({
   ];
 
   const checkoutMutation = useMutation({
-    mutationFn: ({
+    mutationFn: async ({
       plan,
       provider,
     }: {
       plan: PricingPlan;
       provider?: PaymentProvider;
-    }) =>
-      apiPost<{ checkout_url?: string }>('/api/payment/checkout', {
+    }) => {
+      const email = emailForm.state.values.email.trim().toLowerCase();
+      const parsed = z
+        .union([z.literal(''), z.email().max(191)])
+        .safeParse(email);
+      if (!parsed.success) throw new Error(m['guest.email_invalid']());
+      const purchaseId = await prepareCheckout?.(email);
+      return apiPost<{ checkout_url?: string }>('/api/payment/checkout', {
+        email,
+        purchase_id: purchaseId,
         product_id: plan.productId,
         product_name: plan.productName || plan.name,
         plan_name: plan.plan?.name || plan.name,
@@ -247,8 +257,9 @@ export function Pricing({
         credits_valid_days: plan.creditsValidDays,
         payment_provider: provider,
         // Come back to the page the user paid from.
-        redirect: currentPathWithQuery('/settings/billing'),
-      }),
+        redirect: purchaseId ? '/#create' : currentPathWithQuery('/videos'),
+      });
+    },
     onSuccess: (data) => {
       if (!data?.checkout_url) {
         toast.error('Checkout failed');
@@ -264,6 +275,7 @@ export function Pricing({
   });
 
   function startCheckout(plan: PricingPlan, provider?: PaymentProvider) {
+    if (checkoutMutation.isPending) return;
     track('begin_checkout', {
       plan: plan.productId ?? '',
       product_id: plan.productId ?? '',
@@ -281,11 +293,6 @@ export function Pricing({
       surface: variant,
       signed_in: session?.user ? 1 : 0,
     });
-    if (!session?.user) {
-      const callbackUrl = encodeURIComponent(currentPathWithQuery('/pricing'));
-      router.push(`/sign-in?callbackUrl=${callbackUrl}`);
-      return;
-    }
 
     // A click can land before public config has loaded — fetch it first
     // instead of guessing a provider that may not be configured.
@@ -337,17 +344,54 @@ export function Pricing({
             {m['landing.pricing.description']()}
           </p>
           <p className="text-muted-foreground mt-2 text-sm">
-            {m['landing.pricing.per_video_lengths']({
-              short: perVideo.toLocaleString('en-US'),
-              long: perLongVideo.toLocaleString('en-US'),
+            {m['landing.pricing.per_video_fixed']({
+              credits: perVideo.toLocaleString('en-US'),
             })}
           </p>
         </div>
-        <PricingTable
-          groups={groups}
-          defaultGroup="one-time"
-          onCheckout={handleCheckout}
-        />
+        <div className="mx-auto mb-8 max-w-md space-y-2">
+          <emailForm.Field name="email">
+            {(field) => (
+              <TextField
+                field={field}
+                id={emailInputId}
+                label={m['guest.email_label']()}
+                type="email"
+                autoComplete="email"
+                disabled={checkoutMutation.isPending}
+              />
+            )}
+          </emailForm.Field>
+          <p className="text-muted-foreground text-sm">
+            {m['guest.email_hint']()}
+          </p>
+        </div>
+        {checkoutMutation.isPending && (
+          <p
+            className="text-muted-foreground mb-4 text-center text-sm"
+            role="status"
+          >
+            {m['guest.preparing_checkout']()}
+          </p>
+        )}
+        <div
+          className={
+            checkoutMutation.isPending
+              ? 'pointer-events-none opacity-60'
+              : undefined
+          }
+          aria-busy={checkoutMutation.isPending}
+        >
+          <PricingTable
+            groups={
+              session?.user
+                ? groups
+                : groups.filter((group) => group.key === 'one-time')
+            }
+            defaultGroup="one-time"
+            onCheckout={handleCheckout}
+          />
+        </div>
       </div>
 
       {modalMounted && (

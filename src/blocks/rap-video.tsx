@@ -21,12 +21,10 @@ import { useSession } from '@/core/auth/client';
 import { Link } from '@/core/i18n/navigation';
 import {
   DEFAULT_DUET_LENGTH,
-  DUET_LENGTHS,
   type DuetLength,
 } from '@/config/hotel-lobby-pricing';
 import {
   DEFAULT_DUET_SIZE,
-  DUET_SIZES,
   OFFERED_DUET_SIZES,
   type DuetSize,
 } from '@/config/hotel-lobby-sizes';
@@ -136,6 +134,7 @@ type DuetTask = {
   sceneImageUrl: string | null;
   videoUrl: string | null;
   error: string | null;
+  emailProvided?: boolean;
 };
 
 type DuetPreview = {
@@ -149,7 +148,12 @@ type DuetPreview = {
 
 const DIRECTION_BLOCKED = 'DIRECTION_BLOCKED';
 
-type Saved = { previewId?: string; taskId?: string; at: number };
+type Saved = {
+  previewId?: string;
+  taskId?: string;
+  purchaseId?: string;
+  at: number;
+};
 const SAVED_KEY = 'hl-duet';
 const SAVED_TTL = 3 * 24 * 60 * 60 * 1000;
 
@@ -159,10 +163,6 @@ const SAVED_TTL = 3 * 24 * 60 * 60 * 1000;
 type Draft = {
   photoA: File | null;
   photoB: File | null;
-  direction: string;
-  size: DuetSize;
-  length: DuetLength;
-  consent: boolean;
   at: number;
 };
 const DRAFT_KEY = 'hl-create-draft';
@@ -174,33 +174,6 @@ function loadSaved(): Saved | null {
     return saved && Date.now() - saved.at < SAVED_TTL ? saved : null;
   } catch {
     return null;
-  }
-}
-
-// Preview the visitor asked to animate before being sent to sign up.
-const RESUME_KEY = 'hl-resume-animate';
-
-function resumeAnimate(previewId?: string) {
-  try {
-    if (previewId) {
-      localStorage.setItem(
-        RESUME_KEY,
-        JSON.stringify({ previewId, at: Date.now() })
-      );
-    }
-  } catch {}
-}
-
-/** The pending preview id (if fresh), cleared so it only resumes once. */
-function takeResumeAnimate(): string | undefined {
-  try {
-    const raw = localStorage.getItem(RESUME_KEY);
-    if (!raw) return undefined;
-    localStorage.removeItem(RESUME_KEY);
-    const { previewId, at } = JSON.parse(raw);
-    return Date.now() - at < 60 * 60 * 1000 ? previewId : undefined;
-  } catch {
-    return undefined;
   }
 }
 
@@ -280,7 +253,7 @@ function WatermarkedImage({
   );
 }
 
-// Downscale to ≤1536px JPEG so uploads stay small; fal accepts data URIs.
+// Downscale to ≤1536px JPEG; the server uploads both portraits to EvoLink.
 async function toDataUrl(file: File, maxSide = 1536): Promise<string> {
   const bitmap = await createImageBitmap(file);
   const scale = Math.min(1, maxSide / Math.max(bitmap.width, bitmap.height));
@@ -297,11 +270,13 @@ function PhotoInput({
   side,
   file,
   onFile,
+  disabled,
 }: {
   label: string;
   side: string;
   file: File | null;
   onFile: (file: File | null) => void;
+  disabled?: boolean;
 }) {
   // Derived from the file prop so a draft restored after sign-in shows too.
   const [preview, setPreview] = useState<string>();
@@ -312,46 +287,77 @@ function PhotoInput({
     return () => URL.revokeObjectURL(url);
   }, [file]);
   return (
-    <label className="rv-upload">
-      <input
-        type="file"
-        accept="image/png,image/jpeg,image/webp"
-        className="sr-only"
-        onChange={(e) => {
-          const file = e.target.files?.[0] ?? null;
-          if (file && file.size > 10 * 1024 * 1024) {
-            alert(m['hotel.upload_limit']());
+    <div className="rv-photo-slot">
+      <div className="rv-photo-label">
+        <span>{label}</span>
+        <small>{side}</small>
+      </div>
+      <label
+        className={`rv-upload ${preview ? 'rv-upload-filled' : ''} ${disabled ? 'rv-upload-disabled' : ''}`}
+      >
+        <input
+          type="file"
+          accept="image/png,image/jpeg,image/webp"
+          className="sr-only"
+          aria-label={label}
+          disabled={disabled}
+          onChange={(e) => {
+            const selected = e.target.files?.[0] ?? null;
+            if (selected && selected.size > 10 * 1024 * 1024) {
+              alert(m['hotel.upload_limit']());
+              e.target.value = '';
+              return;
+            }
+            if (selected) track('hl_photo_upload');
+            onFile(selected);
             e.target.value = '';
-            return;
-          }
-          if (file) track('hl_photo_upload');
-          onFile(file);
-        }}
-      />
-      {preview ? (
-        <img src={preview} alt={label} className="rv-upload-preview" />
-      ) : (
-        <Upload size={24} strokeWidth={1.5} />
+          }}
+        />
+        {preview && (
+          <img src={preview} alt={label} className="rv-upload-preview" />
+        )}
+        <span className="rv-upload-content">
+          <span className="rv-upload-icon">
+            <Upload size={23} strokeWidth={1.5} />
+          </span>
+          <span className="rv-upload-title">
+            {preview ? m['studio.change_photo']() : m['studio.choose_photo']()}
+          </span>
+          {!preview && (
+            <span className="rv-upload-subtitle">
+              {m['studio.portrait_hint']()}
+            </span>
+          )}
+        </span>
+      </label>
+      {file && (
+        <button
+          type="button"
+          className="rv-photo-remove"
+          disabled={disabled}
+          aria-label={m['studio.remove_photo']({ person: label })}
+          onClick={() => onFile(null)}
+        >
+          <X size={15} />
+        </button>
       )}
-      <span>{label}</span>
-      <small>{side}</small>
-    </label>
+    </div>
   );
 }
 
 export function RapVideoPage() {
   const [photoA, setPhotoA] = useState<File | null>(null);
   const [photoB, setPhotoB] = useState<File | null>(null);
-  const [direction, setDirection] = useState('');
-  const [size, setSize] = useState<DuetSize>(DEFAULT_DUET_SIZE);
-  const [length, setLength] = useState<DuetLength>(DEFAULT_DUET_LENGTH);
+  const size = DEFAULT_DUET_SIZE;
+  const length = DEFAULT_DUET_LENGTH;
   const [previewId, setPreviewId] = useState<string>();
   const [taskId, setTaskId] = useState<string>();
-  const [consent, setConsent] = useState(false);
+  const [purchaseId, setPurchaseId] = useState<string>();
+  const purchaseDraft = useRef<string | undefined>(undefined);
   const [activeIdea, setActiveIdea] = useState(0);
   const { data: session } = useSession();
   const user = session?.user;
-  const canGenerate = consent && !!photoA && !!photoB;
+  const canGenerate = !!photoA && !!photoB;
   const queryClient = useQueryClient();
   const [paywall, setPaywall] = useState(false);
   // Mount the (lazy) paywall dialog on first open and keep it mounted, so
@@ -363,6 +369,16 @@ export function RapVideoPage() {
   // the preview and task ids live in localStorage, photos aren't needed again.
   useEffect(() => {
     const saved = loadSaved();
+    const returnedPurchase = new URLSearchParams(window.location.search).get(
+      'purchase'
+    );
+    if (returnedPurchase && /^[a-f\d-]{36}$/i.test(returnedPurchase)) {
+      setPurchaseId(returnedPurchase);
+      purchaseDraft.current = returnedPurchase;
+    } else if (saved?.purchaseId) {
+      setPurchaseId(saved.purchaseId);
+      purchaseDraft.current = saved.purchaseId;
+    }
     if (!saved) return;
     setPreviewId(saved.previewId);
     setTaskId(saved.taskId);
@@ -400,39 +416,71 @@ export function RapVideoPage() {
       if (d && Date.now() - d.at < DRAFT_TTL) {
         setPhotoA(d.photoA);
         setPhotoB(d.photoB);
-        setDirection(d.direction);
-        if (OFFERED_DUET_SIZES.includes(d.size)) setSize(d.size);
-        if (d.length in DUET_LENGTHS) setLength(d.length);
-        setConsent(d.consent);
       }
       setDraftReady(true);
     });
   }, []);
   useEffect(() => {
     if (!draftReady) return;
-    if (!photoA && !photoB && !direction.trim()) {
+    if (!photoA && !photoB) {
       draftDelete(DRAFT_KEY);
       return;
     }
     draftSet(DRAFT_KEY, {
       photoA,
       photoB,
-      direction,
-      size,
-      length,
-      consent,
       at: Date.now(),
     } satisfies Draft);
-  }, [draftReady, photoA, photoB, direction, size, length, consent]);
+  }, [draftReady, photoA, photoB]);
   // Only ever written here; cleared explicitly by `forget` so a (re)mount
   // with empty state can't wipe what the restore above is about to read.
   useEffect(() => {
-    if (previewId || taskId) saveState({ previewId, taskId, at: Date.now() });
-  }, [previewId, taskId]);
+    if (previewId || taskId || purchaseId)
+      saveState({ previewId, taskId, purchaseId, at: Date.now() });
+  }, [previewId, taskId, purchaseId]);
   const forget = () => {
     saveState(null);
     setTaskId(undefined);
     setPreviewId(undefined);
+    setPurchaseId(undefined);
+    purchaseDraft.current = undefined;
+    const url = new URL(window.location.href);
+    url.searchParams.delete('purchase');
+    window.history.replaceState(null, '', url.pathname + url.search + url.hash);
+  };
+
+  const purchaseQuery = useQuery({
+    queryKey: ['video-purchase', purchaseId],
+    queryFn: () =>
+      apiGet<{ status: string; taskId: string | null; emailProvided: boolean }>(
+        `/api/hotel-lobby/purchase?id=${purchaseId}`
+      ),
+    enabled: !!purchaseId,
+    refetchInterval: (q) =>
+      q.state.data?.taskId || q.state.data?.status === 'draft' ? false : 4000,
+  });
+  useEffect(() => {
+    if (!purchaseQuery.data?.taskId) return;
+    setTaskId(purchaseQuery.data.taskId);
+    setPaywall(false);
+    queryClient.invalidateQueries({ queryKey: ['credits'] });
+  }, [purchaseQuery.data?.taskId]);
+
+  const prepareCheckout = async (email: string) => {
+    if (purchaseDraft.current) return purchaseDraft.current;
+    const purchase = await apiPost<{ id: string }>(
+      '/api/hotel-lobby/purchase',
+      {
+        photoA: await toDataUrl(photoA!),
+        photoB: await toDataUrl(photoB!),
+        size,
+        length,
+        email,
+      }
+    );
+    purchaseDraft.current = purchase.id;
+    setPurchaseId(purchase.id);
+    return purchase.id;
   };
 
   const previewQuery = useQuery({
@@ -483,7 +531,6 @@ export function RapVideoPage() {
       apiPost<DuetTask>('/api/hotel-lobby/generate', {
         photoA: await toDataUrl(photoA!),
         photoB: await toDataUrl(photoB!),
-        direction: direction.trim() || undefined,
         size,
         length,
       }),
@@ -498,7 +545,7 @@ export function RapVideoPage() {
   const taskQuery = useQuery({
     queryKey: ['hotel-lobby-task', taskId],
     queryFn: () => apiGet<DuetTask>(`/api/hotel-lobby/task?id=${taskId}`),
-    enabled: !!taskId && !!user,
+    enabled: !!taskId,
     refetchInterval: (query) => {
       const status = query.state.data?.status;
       return status === 'success' || status === 'failed' ? false : 5000;
@@ -507,6 +554,10 @@ export function RapVideoPage() {
   const task = taskQuery.data;
   useEffect(() => {
     if (task?.status === 'success') track('hl_video_ready');
+    if (task?.status === 'success' || task?.status === 'failed') {
+      queryClient.invalidateQueries({ queryKey: ['credits'] });
+      queryClient.invalidateQueries({ queryKey: ['hotel-lobby-videos'] });
+    }
   }, [task?.status]);
   const priceQuery = useQuery({
     queryKey: ['hotel-lobby-price'],
@@ -519,7 +570,6 @@ export function RapVideoPage() {
   const creditsQuery = useQuery({
     queryKey: ['credits'],
     queryFn: () => apiGet<{ balance: number }>('/api/credits'),
-    enabled: !!user,
   });
   const { data: permissions } = useUserPermissions(!!user);
   // Price of the selected length (older API responses only had `credits`).
@@ -535,9 +585,7 @@ export function RapVideoPage() {
     const balance = creditsQuery.data?.balance;
     return (
       !permissions?.isAdmin &&
-      balance !== undefined &&
-      price !== undefined &&
-      balance < price
+      (balance === undefined || price === undefined || balance < price)
     );
   };
   const startGenerate = () => {
@@ -545,41 +593,22 @@ export function RapVideoPage() {
     // New visitors must choose a paid plan before any generation request is
     // submitted. Existing signed-in users with enough credits can still use
     // their balance directly.
-    if (!user || lacksCredits()) return openPaywall();
+    if (lacksCredits()) return openPaywall();
     generate.mutate();
   };
   const startAnimate = () => {
     track('hl_animate_click', { signed_in: user ? 1 : 0 });
-    if (!user) {
-      track('hl_sign_in_prompt');
-      resumeAnimate(previewId);
-      window.location.href = localizeHref(
-        `/sign-up?callbackUrl=${encodeURIComponent('/#create')}`
-      );
-      return;
-    }
     if (lacksCredits()) return openPaywall();
     animate.mutate();
   };
 
   const previewReady = preview?.status === 'success' && !taskId;
-  // Back from sign-up with the preview they wanted animated: carry on (or show
-  // the plans) without making them find and click the button again.
-  useEffect(() => {
-    if (
-      user &&
-      previewReady &&
-      price !== undefined &&
-      creditsQuery.data !== undefined &&
-      takeResumeAnimate() === previewId
-    ) {
-      startAnimate();
-    }
-  }, [user, previewReady, price, creditsQuery.data, previewId]);
   const previewRunning = !!previewId && preview?.status === 'pending';
   const taskRunning =
     generate.isPending ||
     animate.isPending ||
+    (!!purchaseId &&
+      ['waiting', 'checkout'].includes(purchaseQuery.data?.status || '')) ||
     (!!taskId && task?.status !== 'success' && task?.status !== 'failed');
   const running = previewRunning || taskRunning;
   const paidError = (e: Error | null) =>
@@ -593,6 +622,7 @@ export function RapVideoPage() {
     paidError(generate.error) ??
     paidError(animate.error) ??
     (task?.status === 'failed' ? m['hotel.create.video_failed']() : null) ??
+    paidError(taskQuery.error) ??
     null;
   // The inline status line is easy to miss below the button; also toast.
   useEffect(() => {
@@ -609,7 +639,7 @@ export function RapVideoPage() {
     <T,>(set: (value: T) => void) =>
     (value: T) => {
       set(value);
-      if (previewId || taskId) reset();
+      if (previewId || taskId || purchaseId) reset();
     };
   const credits = price?.toLocaleString('en-US') ?? '…';
 
@@ -631,6 +661,7 @@ export function RapVideoPage() {
                 {m['rap.hero.secondary']()}
               </a>
             </div>
+            <p className="rv-hint rv-hero-note">{m['guest.hero_note']()}</p>
           </div>
           <div className="rv-hero-stage">
             <div className="rv-inputs" aria-hidden="true">
@@ -695,9 +726,12 @@ export function RapVideoPage() {
           </div>
           <div className="rv-studio">
             <div className="rv-studio-form">
-              <div className="rv-step">
-                <h3>{m['hotel.create.photos']()}</h3>
-                <p>{m['hotel.create.format']()}</p>
+              <div className="rv-studio-form-heading">
+                <div>
+                  <h3>{m['hotel.create.photos']()}</h3>
+                  <p>{m['studio.upload_hint']()}</p>
+                </div>
+                <span className="rv-studio-spec">10s / 9:16</span>
               </div>
               <div className="rv-upload-grid">
                 <PhotoInput
@@ -705,199 +739,145 @@ export function RapVideoPage() {
                   side={m['hotel.create.left']()}
                   file={photoA}
                   onFile={changeInput(setPhotoA)}
+                  disabled={running}
                 />
                 <PhotoInput
                   label={m['hotel.create.person_b']()}
                   side={m['hotel.create.right']()}
                   file={photoB}
                   onFile={changeInput(setPhotoB)}
+                  disabled={running}
                 />
               </div>
 
-              <div className="rv-step">
-                <h3>{m['rap.create.step_shot']()}</h3>
-                <p>{m['rap.create.step_shot_hint']()}</p>
-              </div>
-              <div className="rv-option-groups">
-                <div>
-                  <p className="rv-field-label" id="duet-size-label">
-                    {m['hotel.create.size']()}
-                  </p>
-                  <div
-                    className="rv-options"
-                    role="radiogroup"
-                    aria-labelledby="duet-size-label"
-                  >
-                    {OFFERED_DUET_SIZES.map((key) => (
+              <p className="rv-upload-format">{m['hotel.create.format']()}</p>
+              <div className="rv-studio-submit">
+                <div className="rv-actions rv-studio-actions">
+                  {task?.status === 'success' || task?.status === 'failed' ? (
+                    <button className="br-btn" type="button" onClick={reset}>
+                      {m['hotel.create.again']()} <ArrowRight size={17} />
+                    </button>
+                  ) : previewReady ? (
+                    <>
                       <button
-                        key={key}
+                        className={`br-btn ${animate.isPending ? 'br-disabled' : ''}`}
                         type="button"
-                        role="radio"
-                        aria-checked={size === key}
-                        className="rv-option"
-                        disabled={running}
-                        onClick={() =>
-                          key !== size && changeInput(setSize)(key)
-                        }
+                        disabled={animate.isPending}
+                        onClick={startAnimate}
                       >
-                        <span
-                          className="rv-option-shape"
-                          style={{
-                            aspectRatio: `${DUET_SIZES[key].width} / ${DUET_SIZES[key].height}`,
-                          }}
-                        />
-                        <span>
-                          {key === 'full'
-                            ? m['hotel.create.shot_full']()
-                            : m['hotel.create.shot_classic']()}
-                        </span>
+                        {animate.isPending && (
+                          <Loader2 size={17} className="animate-spin" />
+                        )}
+                        {m['hotel.create.animate']({ credits })}
+                        {!animate.isPending && <ArrowRight size={17} />}
                       </button>
-                    ))}
-                  </div>
-                </div>
-                <div>
-                  <p className="rv-field-label" id="duet-length-label">
-                    {m['hotel.create.length']()}
-                  </p>
-                  <div
-                    className="rv-options"
-                    role="radiogroup"
-                    aria-labelledby="duet-length-label"
-                  >
-                    {(Object.keys(DUET_LENGTHS) as DuetLength[]).map((key) => (
                       <button
-                        key={key}
+                        className="br-btn br-btn-ghost"
                         type="button"
-                        role="radio"
-                        aria-checked={length === key}
-                        className="rv-option"
-                        disabled={running}
-                        onClick={() => setLength(key)}
+                        onClick={reset}
                       >
-                        <span className="rv-option-seconds">
-                          {m['hotel.create.length_seconds']({ seconds: key })}
-                        </span>
-                        <span>
-                          {priceQuery.data?.lengths?.[key]?.toLocaleString(
-                            'en-US'
-                          ) ?? '…'}{' '}
-                          {m['hotel.create.length_credits']()}
-                        </span>
+                        {m['hotel.create.start_over']()}
                       </button>
-                    ))}
-                  </div>
-                </div>
-              </div>
-
-              <div className="rv-step">
-                <h3>
-                  <label htmlFor="direction">
-                    {m['hotel.create.direction']()}
-                  </label>
-                </h3>
-                <p>{m['rap.create.step_note_hint']()}</p>
-              </div>
-              <textarea
-                id="direction"
-                value={direction}
-                onChange={(e) => setDirection(e.target.value)}
-                maxLength={400}
-                placeholder={m['hotel.create.placeholder']()}
-              />
-              <label className="rv-consent">
-                <input
-                  type="checkbox"
-                  checked={consent}
-                  onChange={(e) => setConsent(e.target.checked)}
-                />
-                <span>{m['hotel.create.consent']()}</span>
-              </label>
-              <div className="rv-actions">
-                {task?.status === 'success' || task?.status === 'failed' ? (
-                  <button className="br-btn" type="button" onClick={reset}>
-                    {m['hotel.create.again']()} <ArrowRight size={17} />
-                  </button>
-                ) : previewReady ? (
-                  <>
+                    </>
+                  ) : (
                     <button
-                      className={`br-btn ${animate.isPending ? 'br-disabled' : ''}`}
+                      className={`br-btn ${!canGenerate || running ? 'br-disabled' : ''}`}
                       type="button"
-                      disabled={animate.isPending}
-                      onClick={startAnimate}
+                      disabled={!canGenerate || running}
+                      onClick={startGenerate}
                     >
-                      {animate.isPending && (
+                      {running && (
                         <Loader2 size={17} className="animate-spin" />
                       )}
-                      {user
-                        ? m['hotel.create.animate']({ credits })
-                        : m['hotel.create.animate_sign_in']()}
-                      {!animate.isPending && <ArrowRight size={17} />}
+                      {m['hotel.create.generate']()}
+                      {!running && <ArrowRight size={17} />}
                     </button>
-                    <button
-                      className="br-btn br-btn-ghost"
-                      type="button"
-                      onClick={reset}
-                    >
-                      {m['hotel.create.start_over']()}
-                    </button>
-                  </>
-                ) : (
-                  <button
-                    className={`br-btn ${!canGenerate || running ? 'br-disabled' : ''}`}
-                    type="button"
-                    disabled={!canGenerate || running}
-                    onClick={startGenerate}
-                  >
-                    {running && <Loader2 size={17} className="animate-spin" />}
-                    {m['hotel.create.generate']()}
-                    {!running && <ArrowRight size={17} />}
-                  </button>
-                )}
-                {task?.videoUrl && (
-                  <>
-                    <a
-                      className="br-btn br-btn-ghost"
-                      href={`/api/hotel-lobby/download?id=${task.id}`}
-                      download
-                    >
-                      {m['hotel.create.download']()} <Download size={17} />
+                  )}
+                  {task?.videoUrl && (
+                    <>
+                      <a
+                        className="br-btn br-btn-ghost"
+                        href={`/api/hotel-lobby/download?id=${task.id}`}
+                        download
+                      >
+                        {m['hotel.create.download']()} <Download size={17} />
+                      </a>
+                      <Link className="br-btn br-btn-ghost" href="/videos">
+                        {m['hotel.create.my_videos']()}
+                      </Link>
+                    </>
+                  )}
+                </div>
+                {price !== undefined && !previewReady && (
+                  <div className="rv-studio-price">
+                    <span>{m['hotel.create.cost']({ credits })}</span>
+                    <a href="#pricing">
+                      {m['hotel.create.buy_credits']()} <ArrowRight size={12} />
                     </a>
-                    <Link
-                      className="br-btn br-btn-ghost"
-                      href="/settings/videos"
-                    >
-                      {m['hotel.create.my_videos']()}
-                    </Link>
-                  </>
+                  </div>
                 )}
+                {task?.status === 'success' && !task.emailProvided && (
+                  <p className="rv-hint rv-download-reminder">
+                    {m['guest.download_reminder']()}
+                  </p>
+                )}
+                {purchaseId &&
+                  !taskId &&
+                  purchaseQuery.data?.status === 'waiting' && (
+                    <p className="rv-hint" role="status">
+                      {m['guest.payment_pending']()}{' '}
+                      <button type="button" onClick={reset}>
+                        {m['hotel.create.start_over']()}
+                      </button>
+                    </p>
+                  )}
+                <p className="rv-studio-consent">
+                  {m['hotel.create.consent']()}
+                </p>
+                <details className="rv-studio-details">
+                  <summary>{m['studio.about_audio']()}</summary>
+                  <p>{m['hotel.create.audio_note']()}</p>
+                </details>
               </div>
-              {price !== undefined && !previewReady && (
-                <p className="rv-hint">
-                  {m['hotel.create.cost']({ credits })}{' '}
-                  <a href="#pricing">{m['hotel.create.buy_credits']()}</a>
+              {(running ||
+                error ||
+                task?.status === 'success' ||
+                task?.status === 'failed' ||
+                previewReady) && (
+                <p
+                  className={`rv-studio-status ${error ? 'rv-studio-status-error' : ''}`}
+                  role="status"
+                  aria-live="polite"
+                >
+                  {error
+                    ? `${m['hotel.create.failed']()}: ${error}`
+                    : task?.status === 'success'
+                      ? m['hotel.create.done']()
+                      : generate.isPending
+                        ? m['hotel.create.submitting']()
+                        : task?.stage === 'motion'
+                          ? `${m['hotel.create.stage_motion']()} ${m['hotel.create.keep_open']()}`
+                          : taskId
+                            ? `${m['hotel.create.stage_scene']()} ${m['hotel.create.keep_open']()}`
+                            : previewReady
+                              ? m['hotel.create.preview_ready']({ credits })
+                              : previewRunning
+                                ? m['hotel.create.submitting']()
+                                : photoA && photoB
+                                  ? m['hotel.create.ready']()
+                                  : m['hotel.create.hint']()}
                 </p>
               )}
-              <p className="rv-hint" role="status" aria-live="polite">
-                {error
-                  ? `${m['hotel.create.failed']()}: ${error}`
-                  : task?.status === 'success'
-                    ? m['hotel.create.done']()
-                    : generate.isPending
-                      ? m['hotel.create.submitting']()
-                      : task?.stage === 'motion'
-                        ? `${m['hotel.create.stage_motion']()} ${m['hotel.create.keep_open']()}`
-                        : taskId
-                          ? `${m['hotel.create.stage_scene']()} ${m['hotel.create.keep_open']()}`
-                          : previewReady
-                            ? m['hotel.create.preview_ready']({ credits })
-                            : previewRunning
-                              ? m['hotel.create.submitting']()
-                              : photoA && photoB
-                                ? m['hotel.create.ready']()
-                                : m['hotel.create.hint']()}
-              </p>
             </div>
             <aside className="rv-preview">
+              <div className="rv-preview-heading">
+                <h3>
+                  {task?.videoUrl || task?.sceneImageUrl || preview?.imageUrl
+                    ? m['hotel.create.preview']()
+                    : m['rap.create.example_title']()}
+                </h3>
+                <span>9:16 MP4</span>
+              </div>
               <div className="rv-preview-media">
                 {task?.videoUrl ? (
                   <video
@@ -929,21 +909,11 @@ export function RapVideoPage() {
                   />
                 )}
               </div>
-              {task?.videoUrl || task?.sceneImageUrl || preview?.imageUrl ? (
-                <>
-                  <p className="rv-preview-title">
-                    {m['hotel.create.preview']()}
-                  </p>
-                  <p>{m['hotel.create.preview_note']()}</p>
-                </>
-              ) : (
-                <>
-                  <p className="rv-preview-title">
-                    {m['rap.create.example_title']()}
-                  </p>
-                  <p>{m['rap.create.example_note']()}</p>
-                </>
-              )}
+              <p className="rv-preview-caption">
+                {task?.videoUrl || task?.sceneImageUrl || preview?.imageUrl
+                  ? m['studio.result_note']()
+                  : m['studio.example_note']()}
+              </p>
             </aside>
           </div>
         </section>
@@ -1113,12 +1083,18 @@ export function RapVideoPage() {
         </section>
 
         <div className="rv-pricing">
-          <Pricing />
+          <Pricing
+            prepareCheckout={canGenerate ? prepareCheckout : undefined}
+          />
         </div>
 
         {paywallMounted && (
           <Suspense fallback={null}>
-            <PaywallDialog open={paywall} onOpenChange={setPaywall} />
+            <PaywallDialog
+              open={paywall}
+              onOpenChange={setPaywall}
+              prepareCheckout={prepareCheckout}
+            />
           </Suspense>
         )}
 

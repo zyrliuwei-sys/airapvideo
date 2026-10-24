@@ -1,19 +1,18 @@
 import { createFileRoute } from '@tanstack/react-router';
 
-import { FalProvider } from '@/core/ai';
-import { getAuth } from '@/core/auth';
+import { getVideoActor } from '@/core/auth/video-actor';
 import { AITaskStatus, findTask } from '@/modules/ai-tasks/service';
 import { getAllConfigs } from '@/modules/config/service';
+import { canAccessTask } from '@/modules/video-purchases/service';
 import { respData, respErr } from '@/lib/resp';
 
-import { advance, PIPELINE_MODEL, taskView } from './-pipeline';
+import { advance, duetProvider, PIPELINE_MODEL, taskView } from './-pipeline';
+import { deliverVideoEmails } from './-purchase';
 
 // Poll a duet task; each poll advances the pipeline one step if possible.
 async function GET({ request }: { request: Request }) {
   try {
-    const auth = getAuth();
-    const session = await auth.api.getSession({ headers: request.headers });
-    if (!session?.user) return respErr('Unauthorized');
+    const actor = await getVideoActor(request);
 
     const id = new URL(request.url).searchParams.get('id');
     if (!id) return respErr('id is required');
@@ -21,7 +20,7 @@ async function GET({ request }: { request: Request }) {
     const task = await findTask(id);
     if (
       !task ||
-      task.userId !== session.user.id ||
+      !(await canAccessTask(task, actor.access)) ||
       task.model !== PIPELINE_MODEL
     ) {
       return respErr('Task not found');
@@ -31,12 +30,15 @@ async function GET({ request }: { request: Request }) {
       task.status === AITaskStatus.SUCCESS ||
       task.status === AITaskStatus.FAILED
     ) {
+      await deliverVideoEmails();
       return respData(taskView(task));
     }
 
     const configs = await getAllConfigs();
-    const provider = new FalProvider({ apiKey: configs.fal_api_key });
-    return respData(await advance(task.id, provider));
+    const provider = duetProvider(configs, task.provider);
+    const view = await advance(task.id, provider);
+    await deliverVideoEmails();
+    return respData(view);
   } catch (error: any) {
     return respErr(error?.message || 'Query failed');
   }

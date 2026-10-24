@@ -561,3 +561,32 @@ export type NewTicketMessage = typeof ticketMessage.$inferInsert;
 
 // ─── Custom tables ───────────────────────────────────────────────────────────
 // Add your own tables below this line.
+
+// Paid video drafts survive checkout, browser closure, and webhook retries.
+export const videoPurchase = table(
+  'video_purchase',
+  {
+    id: varchar191('id').primaryKey(),
+    userId: varchar191('user_id')
+      .notNull()
+      .references(() => user.id, { onDelete: 'cascade' }),
+    orderNo: varchar191('order_no').unique(),
+    email: varchar191('email').notNull().default(''),
+    locale: varchar191('locale').notNull().default('en'),
+    input: longtext('input').notNull(),
+    status: varchar191('status').notNull().default('draft'),
+    taskId: varchar191('task_id').unique(),
+    error: longtext('error'),
+    emailSentAt: timestamp('email_sent_at'),
+    emailClaimedAt: timestamp('email_claimed_at'),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+  },
+  (t) => [
+    index('idx_video_purchase_user').on(t.userId, t.createdAt),
+    index('idx_video_purchase_email').on(t.email),
+    index('idx_video_purchase_status').on(t.status, t.createdAt),
+  ]
+);
+
+export type VideoPurchase = typeof videoPurchase.$inferSelect;
+export type NewVideoPurchase = typeof videoPurchase.$inferInsert;

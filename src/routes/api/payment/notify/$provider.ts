@@ -4,6 +4,8 @@ import { isWebhookIgnored } from '@/core/payment/types';
 import { handleWebhook } from '@/modules/payment/service';
 import { respErr, respOk } from '@/lib/resp';
 
+import { startPaidPurchases } from '../../hotel-lobby/-purchase';
+
 // Ack a webhook the provider should consider delivered.
 function ackSuccess(provider: string) {
   // Alipay expects plain text "success"
@@ -32,6 +34,7 @@ export const Route = createFileRoute('/api/payment/notify/$provider')({
 
         try {
           const event = await handleWebhook({ req: request, provider });
+          await startPaidPurchases();
 
           console.log(`Payment event [${provider}]: ${event.eventType}`);
 

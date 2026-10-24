@@ -1,18 +1,12 @@
 import { createFileRoute } from '@tanstack/react-router';
 
-import { AIMediaType, FalProvider } from '@/core/ai';
-import { getAuth } from '@/core/auth';
+import { AIMediaType } from '@/core/ai';
+import { assertVideoOrigin, getVideoActor } from '@/core/auth/video-actor';
 import {
   DEFAULT_DUET_LENGTH,
-  isDuetLength,
   resolveDuetCreditsFor,
 } from '@/config/hotel-lobby-pricing';
-import {
-  DEFAULT_DUET_SIZE,
-  isDuetSize,
-  OFFERED_DUET_SIZES,
-  type DuetSize,
-} from '@/config/hotel-lobby-sizes';
+import { OFFERED_DUET_SIZES, type DuetSize } from '@/config/hotel-lobby-sizes';
 import {
   AITaskStatus,
   claimTaskStatus,
@@ -32,26 +26,23 @@ import { hasPermission } from '@/modules/rbac/service';
 import { respData, respErr } from '@/lib/resp';
 
 import {
-  meetsQuality,
-  motionVideoFor,
+  buildPerformancePrompt,
+  duetProvider,
+  failPipelineTask,
   PIPELINE_MODEL,
-  REFINE_PROMPT,
   submitMotion,
-  submitScene,
   taskView,
-  videoSceneQuality,
+  videoQuality,
 } from './-pipeline';
 
-// Paid step for a free preview: re-render its still at video quality (skipped
-// if the preview already is that good), then run the motion transfer. Same price
-// as a full run — that price already covers a high-quality scene.
+// Animate an existing scene through EvoLink; atomically claim the preview
+// so repeated clicks cannot charge for it twice.
 async function POST({ request }: { request: Request }) {
   try {
-    const session = await getAuth().api.getSession({
-      headers: request.headers,
-    });
-    if (!session?.user) return respErr('Unauthorized');
-    const userId = session.user.id;
+    assertVideoOrigin(request);
+    const actor = await getVideoActor(request);
+    if (!actor.userId) return respErr('Insufficient credits');
+    const userId = actor.userId;
 
     const body = await request.json().catch(() => ({}));
     const previewId = typeof body?.previewId === 'string' ? body.previewId : '';
@@ -82,21 +73,17 @@ async function POST({ request }: { request: Request }) {
 
     const configs = await getAllConfigs();
     const isAdmin = await hasPermission(userId, 'admin.*');
-    const length = isDuetLength(body?.length)
-      ? body.length
-      : DEFAULT_DUET_LENGTH;
+    const length = DEFAULT_DUET_LENGTH;
     const price = resolveDuetCreditsFor(configs, length);
     if (!isAdmin && (await getBalance(userId)) < price) {
       return respErr('Insufficient credits');
     }
-    if (!configs.fal_api_key) return respErr('Generation is not configured');
-    const motionVideoUrl = motionVideoFor(configs, length);
-    if (!motionVideoUrl) return respErr('Reference video is not configured');
+    const provider = duetProvider(configs);
 
     const task = await createTask({
       userId,
       mediaType: AIMediaType.VIDEO,
-      provider: 'fal',
+      provider: 'evolink',
       model: PIPELINE_MODEL,
       prompt: `Animate free preview ${preview.id}`,
       costCredits: isAdmin ? 0 : price,
@@ -113,41 +100,30 @@ async function POST({ request }: { request: Request }) {
     }
 
     try {
-      const provider = new FalProvider({ apiKey: configs.fal_api_key });
-      const quality = videoSceneQuality(configs);
-      if (meetsQuality(preview.quality, quality)) {
-        await claimTaskStatus(
-          task.id,
-          AITaskStatus.PENDING,
-          AITaskStatus.PROCESSING
-        );
-        await submitMotion(
-          task.id,
-          provider,
-          preview.sceneImageUrl,
-          motionVideoUrl
-        );
-      } else {
-        // Cheap preview still → re-render at video quality, then the regular
-        // pipeline (task polling) runs the motion transfer on that frame.
-        const size = isDuetSize(preview.size)
-          ? preview.size
-          : DEFAULT_DUET_SIZE;
-        const imageRequestId = await submitScene(
-          provider,
-          [preview.sceneImageUrl],
-          REFINE_PROMPT,
-          size,
-          quality
-        );
-        await mergeTaskInfo(task.id, { imageRequestId, motionVideoUrl });
-      }
-    } catch (error: any) {
-      await updateTask({
-        taskId: task.id,
-        status: AITaskStatus.FAILED,
-        taskResult: { error: error?.message },
+      const performance = {
+        length,
+        quality: videoQuality(configs),
+        prompt: buildPerformancePrompt(length),
+      };
+      await mergeTaskInfo(task.id, {
+        length,
+        quality: performance.quality,
+        videoPrompt: performance.prompt,
       });
+      await claimTaskStatus(
+        task.id,
+        AITaskStatus.PENDING,
+        AITaskStatus.PROCESSING
+      );
+      await submitMotion(
+        task.id,
+        provider,
+        preview.sceneImageUrl,
+        undefined,
+        performance
+      );
+    } catch (error: any) {
+      await failPipelineTask(task.id, error?.message || 'Generation failed');
       throw error;
     }
 

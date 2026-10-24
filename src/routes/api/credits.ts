@@ -1,21 +1,21 @@
 import { createFileRoute } from '@tanstack/react-router';
 
-import { getAuth } from '@/core/auth';
+import { getVideoActor } from '@/core/auth/video-actor';
 import { getBalance, getHistory } from '@/modules/credits/service';
 import { respData, respErr } from '@/lib/resp';
 
 async function GET({ request }: { request: Request }) {
   try {
-    const auth = getAuth();
-    const session = await auth.api.getSession({ headers: request.headers });
-
-    if (!session?.user) {
-      return respErr('Unauthorized');
-    }
+    const actor = await getVideoActor(request);
+    if (!actor.userId)
+      return respData(
+        { balance: 0, history: [] },
+        { headers: { 'Cache-Control': 'no-store' } }
+      );
 
     const [balance, history] = await Promise.all([
-      getBalance(session.user.id),
-      getHistory(session.user.id),
+      getBalance(actor.userId),
+      getHistory(actor.userId),
     ]);
 
     return respData({ balance, history });

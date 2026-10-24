@@ -1,7 +1,8 @@
 import { createFileRoute } from '@tanstack/react-router';
 
-import { getAuth } from '@/core/auth';
+import { getVideoActor } from '@/core/auth/video-actor';
 import { AITaskStatus, findTask } from '@/modules/ai-tasks/service';
+import { canAccessTask } from '@/modules/video-purchases/service';
 import { respErr } from '@/lib/resp';
 
 import { PIPELINE_MODEL, taskView } from './-pipeline';
@@ -10,14 +11,13 @@ import { PIPELINE_MODEL, taskView } from './-pipeline';
 // origin (R2 / fal), where the browser ignores <a download>, so it's streamed
 // through here with an attachment Content-Disposition.
 async function GET({ request }: { request: Request }) {
-  const session = await getAuth().api.getSession({ headers: request.headers });
-  if (!session?.user) return respErr('Unauthorized');
+  const actor = await getVideoActor(request);
 
   const id = new URL(request.url).searchParams.get('id');
   const task = id ? await findTask(id) : undefined;
   if (
     !task ||
-    task.userId !== session.user.id ||
+    !(await canAccessTask(task, actor.access)) ||
     task.model !== PIPELINE_MODEL ||
     task.status !== AITaskStatus.SUCCESS
   ) {

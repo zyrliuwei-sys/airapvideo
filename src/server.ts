@@ -74,7 +74,23 @@ export default {
     await ensureCloudflareEnv();
     const response = await renderWithEdgeCache(req);
     response.headers.set('X-Content-Type-Options', 'nosniff');
-    response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
+    if (!response.headers.has('Referrer-Policy'))
+      response.headers.set(
+        'Referrer-Policy',
+        'strict-origin-when-cross-origin'
+      );
+    const responsePath = new URL(req.url).pathname;
+    if (
+      [
+        '/api/credits',
+        '/api/hotel-lobby/task',
+        '/api/hotel-lobby/videos',
+        '/api/hotel-lobby/purchase',
+      ].includes(responsePath) ||
+      responsePath.startsWith('/api/video-access/')
+    ) {
+      response.headers.set('Cache-Control', 'private, no-store');
+    }
     response.headers.set(
       'Permissions-Policy',
       'camera=(), microphone=(), geolocation=()'
