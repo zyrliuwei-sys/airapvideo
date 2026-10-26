@@ -1206,5 +1206,19 @@
   "guides.read": "Read",
   "guides.back": "Back to guides",
   "blog.updated": "Updated {date}",
-  "guides.facts_title": "airapvideo at a glance"
+  "guides.facts_title": "airapvideo at a glance",
+  "phone_upload.button": "Upload from your phone",
+  "phone_upload.title": "Scan to add photos from your phone",
+  "phone_upload.description": "Scan this code with your phone camera, then pick a photo for each rapper. They appear here automatically.",
+  "phone_upload.waiting": "waiting",
+  "phone_upload.received": "added",
+  "phone_upload.expires": "The code works for 30 minutes. Photos are deleted from our server as soon as they reach this page.",
+  "phone_upload.error": "Could not start phone upload. Please try again.",
+  "phone_upload.page_title": "Send photos to your computer",
+  "phone_upload.page_description": "Choose a clear, front-facing photo for each rapper. They show up on your computer right away.",
+  "phone_upload.pick": "Choose photo",
+  "phone_upload.sending": "Sending…",
+  "phone_upload.sent": "Sent",
+  "phone_upload.expired": "This link has expired. Scan a new code on your computer.",
+  "phone_upload.done": "All set. Go back to your computer to create your video."
 }

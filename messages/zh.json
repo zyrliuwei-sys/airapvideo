@@ -97,5 +97,19 @@
   "guides.read": "阅读",
   "guides.back": "返回指南",
   "blog.updated": "更新于 {date}",
-  "guides.facts_title": "airapvideo 速览"
+  "guides.facts_title": "airapvideo 速览",
+  "phone_upload.button": "用手机上传照片",
+  "phone_upload.title": "扫码从手机添加照片",
+  "phone_upload.description": "用手机相机扫描二维码，为每位说唱者选一张照片，照片会自动出现在这里。",
+  "phone_upload.waiting": "等待中",
+  "phone_upload.received": "已添加",
+  "phone_upload.expires": "二维码 30 分钟内有效。照片传到本页后会立即从服务器删除。",
+  "phone_upload.error": "无法开启手机上传，请重试。",
+  "phone_upload.page_title": "把照片发送到电脑",
+  "phone_upload.page_description": "为每位说唱者选择一张清晰的正面照片，照片会立即出现在你的电脑上。",
+  "phone_upload.pick": "选择照片",
+  "phone_upload.sending": "发送中…",
+  "phone_upload.sent": "已发送",
+  "phone_upload.expired": "链接已过期，请在电脑上重新扫码。",
+  "phone_upload.done": "完成！回到电脑上生成你的视频吧。"
 }

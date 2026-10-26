@@ -39,6 +39,7 @@ import { useUserPermissions } from '@/hooks/use-user-permissions';
 import { Footer } from '@/blocks/footer';
 import { Guides } from '@/blocks/guides';
 import { Header } from '@/blocks/header';
+import { PhoneUpload } from '@/blocks/phone-upload';
 import { Pricing } from '@/blocks/pricing';
 
 import '@/styles/rap-video.css';
@@ -843,6 +844,12 @@ export function RapVideoPage() {
                 />
               </div>
 
+              <PhoneUpload
+                disabled={running}
+                onPhoto={(slot, file) =>
+                  changeInput(slot === 'a' ? setPhotoA : setPhotoB)(file)
+                }
+              />
               <p className="rv-upload-format">{m['hotel.create.format']()}</p>
               <p className="rv-local-preview-note">{m['studio.free_note']()}</p>
               <div className="rv-studio-submit">
