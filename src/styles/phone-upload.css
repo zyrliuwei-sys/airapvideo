@@ -69,27 +69,66 @@
 
 /* ─── Desktop: "upload from phone" trigger + QR dialog ───────────────── */
 .pu-trigger {
-  display: inline-flex;
+  display: flex;
+  width: 100%;
   align-items: center;
-  gap: 8px;
+  gap: 14px;
   margin-top: 14px;
-  padding: 0;
-  border: 0;
-  background: none;
-  color: var(--br-orange);
+  padding: 14px 16px;
+  border: 1px dashed rgb(244 237 227 / 26%);
+  border-radius: 16px;
+  background: var(--studio-well, rgb(255 255 255 / 4%));
+  color: var(--br-paper);
   font: inherit;
-  font-size: 14px;
-  font-weight: 600;
+  text-align: left;
   cursor: pointer;
+  transition:
+    border-color 180ms ease,
+    background 180ms ease;
 }
-.pu-trigger:hover {
-  text-decoration: underline;
-  text-underline-offset: 4px;
+.pu-trigger:hover,
+.pu-trigger:focus-visible {
+  border-color: var(--br-orange);
+  background: oklch(0.25 0.024 48);
 }
 .pu-trigger:disabled {
   opacity: 0.5;
   cursor: default;
-  text-decoration: none;
+  border-color: rgb(244 237 227 / 26%);
+}
+.pu-trigger-icon {
+  display: grid;
+  width: 44px;
+  height: 44px;
+  flex: none;
+  place-items: center;
+  border-radius: 12px;
+  background: var(--br-orange);
+  color: var(--br-bg);
+}
+.pu-trigger-text {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+}
+.pu-trigger-title {
+  font-size: 15px;
+  font-weight: 650;
+}
+.pu-trigger-hint {
+  color: var(--br-smoke);
+  font-size: 13px;
+  line-height: 1.4;
+}
+.pu-trigger-arrow {
+  flex: none;
+  color: var(--br-orange);
+  transition: transform 180ms ease;
+}
+.pu-trigger:hover .pu-trigger-arrow {
+  transform: translateX(3px);
 }
 /* Touch devices already have the photo library one tap away. */
 @media (hover: none) and (pointer: coarse) {

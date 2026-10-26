@@ -1220,5 +1220,8 @@
   "phone_upload.sending": "Sending…",
   "phone_upload.sent": "Sent",
   "phone_upload.expired": "This link has expired. Scan a new code on your computer.",
-  "phone_upload.done": "All set. Go back to your computer to create your video."
+  "phone_upload.done": "All set. Go back to your computer to create your video.",
+  "phone_upload.updated": "Photo updated from your phone",
+  "phone_upload.sent_change": "Sent · tap to change",
+  "phone_upload.button_hint": "Photos on your phone? Scan a QR code to send them here."
 }

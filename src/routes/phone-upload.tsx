@@ -92,7 +92,7 @@ function PhoneUploadPage() {
                   ) : slots[slot] === 'sent' ? (
                     <>
                       <Check size={18} />
-                      {m['phone_upload.sent']()}
+                      {m['phone_upload.sent_change']()}
                     </>
                   ) : (
                     <>

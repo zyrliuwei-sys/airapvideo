@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { Check, Loader2, Smartphone } from 'lucide-react';
+import { ArrowRight, Check, Loader2, QrCode } from 'lucide-react';
+import { toast } from 'sonner';
 import { renderSVG } from 'uqr';
 
 import { apiDelete, apiGet, apiPost } from '@/lib/api-client';
@@ -21,6 +22,8 @@ type Slot = 'a' | 'b';
 /**
  * "Upload from your phone": shows a QR code that opens /phone-upload on the
  * phone; photos picked there are polled here and handed to `onPhoto`.
+ * The session outlives the dialog, so swapping a photo on the phone later
+ * still updates this page; it ends when generation starts or it expires.
  */
 export function PhoneUpload({
   onPhoto,
@@ -36,6 +39,8 @@ export function PhoneUpload({
   });
   const onPhotoRef = useRef(onPhoto);
   onPhotoRef.current = onPhoto;
+  const openRef = useRef(open);
+  openRef.current = open;
 
   const session = useMutation({
     mutationFn: () =>
@@ -47,8 +52,9 @@ export function PhoneUpload({
     queryKey: ['phone-upload', token],
     queryFn: () =>
       apiGet<Partial<Record<Slot, string>>>(`/api/phone-upload?token=${token}`),
-    enabled: open && !!token,
-    refetchInterval: 2000,
+    enabled: !!token && !disabled,
+    // Faster while the QR dialog is up; slower once it's closed.
+    refetchInterval: open ? 2000 : 4000,
     // Keep polling while the user is busy on the phone and this tab is hidden.
     refetchIntervalInBackground: true,
     gcTime: 0,
@@ -61,18 +67,27 @@ export function PhoneUpload({
       if (!photo) continue;
       onPhotoRef.current(slot, dataUrlToFile(photo, `phone-${slot}.jpg`));
       setReceived((r) => ({ ...r, [slot]: true }));
+      if (!openRef.current) toast.success(m['phone_upload.updated']());
     }
   }, [poll.data]);
 
-  const close = () => {
-    setOpen(false);
+  const end = () => {
     if (token) apiDelete(`/api/phone-upload?token=${token}`).catch(() => {});
     session.reset();
   };
+  // Expired session: drop it so the next click shows a fresh code.
+  const expired = !!poll.error?.message && /expired/i.test(poll.error.message);
+  useEffect(() => {
+    if (expired && !openRef.current) session.reset();
+  }, [expired]);
+  // Generation started: the photos are locked in, stop listening.
+  useEffect(() => {
+    if (disabled && token) end();
+  }, [disabled]);
   // Both photos in: close shortly after so the "added" state is visible.
   useEffect(() => {
     if (!open || !received.a || !received.b) return;
-    const timer = setTimeout(close, 1200);
+    const timer = setTimeout(() => setOpen(false), 1200);
     return () => clearTimeout(timer);
   }, [open, received.a, received.b]);
 
@@ -85,8 +100,6 @@ export function PhoneUpload({
         : '',
     [token]
   );
-  const expired = poll.error?.message && /expired/i.test(poll.error.message);
-
   return (
     <>
       <button
@@ -94,15 +107,25 @@ export function PhoneUpload({
         className="pu-trigger"
         disabled={disabled}
         onClick={() => {
-          setReceived({ a: false, b: false });
           setOpen(true);
+          // Reuse a live session so the phone page already open keeps working.
+          if (token && !expired) return;
+          setReceived({ a: false, b: false });
           session.mutate();
         }}
       >
-        <Smartphone size={16} />
-        {m['phone_upload.button']()}
+        <span className="pu-trigger-icon" aria-hidden="true">
+          <QrCode size={22} />
+        </span>
+        <span className="pu-trigger-text">
+          <span className="pu-trigger-title">{m['phone_upload.button']()}</span>
+          <span className="pu-trigger-hint">
+            {m['phone_upload.button_hint']()}
+          </span>
+        </span>
+        <ArrowRight size={18} className="pu-trigger-arrow" aria-hidden="true" />
       </button>
-      <Dialog open={open} onOpenChange={(next) => !next && close()}>
+      <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="sm:max-w-sm">
           <DialogHeader>
             <DialogTitle>{m['phone_upload.title']()}</DialogTitle>
