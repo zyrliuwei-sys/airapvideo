@@ -384,3 +384,10 @@
     display: block;
   }
 }
+
+/* Phones: the homepage guide is hidden there, so drop its menu link too. */
+@media (max-width: 640px) {
+  .br-nav .br-nav-desktop {
+    display: none;
+  }
+}

@@ -28,9 +28,14 @@ export function Header() {
   const user = mounted ? session?.user : undefined;
 
   // Section links point at the homepage so they also work from inner pages.
+  // The guide is desktop-only (hidden on phones), so is its link.
   const links = [
     { href: '/videos', label: m['hotel.create.my_videos']() },
-    { href: '/#guide', label: m['rap.nav.guide']() },
+    {
+      href: '/#guide',
+      label: m['rap.nav.guide'](),
+      className: 'br-nav-desktop',
+    },
     { href: '/#how', label: m['hotel.nav.how']() },
     { href: '/#pricing', label: m['hotel.nav.pricing']() },
     { href: '/#faq', label: m['hotel.nav.faq']() },
@@ -56,6 +61,7 @@ export function Header() {
             <a
               key={link.href}
               href={localizeHref(link.href)}
+              className={link.className}
               onClick={() => setOpen(false)}
             >
               {link.label}

@@ -1109,6 +1109,7 @@
   }
   .rv-facts,
   .rv-guide,
+  .rv-guides,
   .rv-features,
   .rv-how,
   .rv-tips,
@@ -1277,5 +1278,10 @@
 @media (max-width: 640px) {
   .rv-showcase {
     padding: 56px 16px;
+  }
+  /* Phones get the main clips only; the "More ideas" wall is desktop/tablet. */
+  .rv-showcase-more-title,
+  .rv-showcase-more {
+    display: none;
   }
 }
