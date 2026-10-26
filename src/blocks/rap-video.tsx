@@ -422,65 +422,69 @@ function PhotoInput({
         <span>{label}</span>
         <small>{side}</small>
       </div>
-      <label
-        className={`rv-upload ${preview ? 'rv-upload-filled' : ''} ${disabled ? 'rv-upload-disabled' : ''}`}
-      >
-        <input
-          type="file"
-          accept="image/png,image/jpeg,image/webp"
-          className="sr-only"
-          aria-label={label}
-          disabled={disabled}
-          onChange={(e) => {
-            const selected = e.target.files?.[0] ?? null;
-            if (selected && selected.size > 10 * 1024 * 1024) {
-              alert(m['hotel.upload_limit']());
-              e.target.value = '';
-              return;
-            }
-            if (selected) {
-              if (
-                !['image/jpeg', 'image/png', 'image/webp'].includes(
-                  selected.type
-                )
-              ) {
-                toast.error(m['studio.photo_error']());
-              } else {
-                onFile(selected);
-                track('hl_photo_upload');
-              }
-            }
-            e.target.value = '';
-          }}
-        />
-        {preview && (
-          <img src={preview} alt={label} className="rv-upload-preview" />
-        )}
-        <span className="rv-upload-content">
-          <span className="rv-upload-icon">
-            <Upload size={23} strokeWidth={1.5} />
-          </span>
-          <span className="rv-upload-title">
-            {preview ? m['studio.change_photo']() : m['studio.choose_photo']()}
-          </span>
-          {!preview && (
-            <span className="rv-upload-subtitle">
-              {m['studio.portrait_hint']()}
-            </span>
-          )}
-        </span>
-      </label>
-      {file && (
-        <button
-          type="button"
-          className="rv-photo-remove"
-          disabled={disabled}
-          aria-label={m['studio.remove_photo']({ person: label })}
-          onClick={() => onFile(null)}
+      <div className="rv-upload-wrap">
+        <label
+          className={`rv-upload ${preview ? 'rv-upload-filled' : ''} ${disabled ? 'rv-upload-disabled' : ''}`}
         >
-          <X size={15} />
-        </button>
-      )}
+          <input
+            type="file"
+            accept="image/png,image/jpeg,image/webp"
+            className="sr-only"
+            aria-label={label}
+            disabled={disabled}
+            onChange={(e) => {
+              const selected = e.target.files?.[0] ?? null;
+              if (selected && selected.size > 10 * 1024 * 1024) {
+                alert(m['hotel.upload_limit']());
+                e.target.value = '';
+                return;
+              }
+              if (selected) {
+                if (
+                  !['image/jpeg', 'image/png', 'image/webp'].includes(
+                    selected.type
+                  )
+                ) {
+                  toast.error(m['studio.photo_error']());
+                } else {
+                  onFile(selected);
+                  track('hl_photo_upload');
+                }
+              }
+              e.target.value = '';
+            }}
+          />
+          {preview && (
+            <img src={preview} alt={label} className="rv-upload-preview" />
+          )}
+          <span className="rv-upload-content">
+            <span className="rv-upload-icon">
+              <Upload size={23} strokeWidth={1.5} />
+            </span>
+            <span className="rv-upload-title">
+              {preview
+                ? m['studio.change_photo']()
+                : m['studio.choose_photo']()}
+            </span>
+            {!preview && (
+              <span className="rv-upload-subtitle">
+                {m['studio.portrait_hint']()}
+              </span>
+            )}
+          </span>
+        </label>
+        {file && (
+          <button
+            type="button"
+            className="rv-photo-remove"
+            disabled={disabled}
+            aria-label={m['studio.remove_photo']({ person: label })}
+            onClick={() => onFile(null)}
+          >
+            <X size={15} />
+          </button>
+        )}
+      </div>
     </div>
   );
 }
@@ -730,6 +734,9 @@ export function RapVideoPage() {
   };
   const startGenerate = () => {
     track('hl_generate_click', { signed_in: user ? 1 : 0 });
+    // The old checkout can't be reopened once bound to an order; drop it so
+    // the paywall prepares a new one. A late payment still renders via cron.
+    if (paymentPending) reset();
     // New visitors must choose a paid plan before any generation request is
     // submitted. Existing signed-in users with enough credits can still use
     // their balance directly.
@@ -744,11 +751,16 @@ export function RapVideoPage() {
 
   const previewReady = preview?.status === 'success' && !taskId;
   const previewRunning = !!previewId && preview?.status === 'pending';
+  // An unpaid checkout (the visitor closed the payment page) keeps polling in
+  // case payment lands, but must not lock the studio: photos stay editable
+  // and Create starts a fresh checkout.
+  const paymentPending =
+    !!purchaseId &&
+    !taskId &&
+    ['waiting', 'checkout'].includes(purchaseQuery.data?.status || '');
   const taskRunning =
     generate.isPending ||
     animate.isPending ||
-    (!!purchaseId &&
-      ['waiting', 'checkout'].includes(purchaseQuery.data?.status || '')) ||
     (!!taskId && task?.status !== 'success' && task?.status !== 'failed');
   const running = previewRunning || taskRunning;
   const paidError = (e: Error | null) =>

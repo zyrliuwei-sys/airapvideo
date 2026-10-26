@@ -285,11 +285,15 @@
 .rv-upload-disabled {
   cursor: default;
 }
+.rv-upload-wrap {
+  position: relative;
+}
+/* Pinned to the photo's top-right corner, whatever the label height. */
 .rv-photo-remove {
   position: absolute;
   z-index: 2;
-  top: 38px;
-  right: 10px;
+  top: 8px;
+  right: 8px;
   display: grid;
   width: 30px;
   height: 30px;
@@ -1055,9 +1059,6 @@
     align-items: flex-start;
     flex-direction: column;
     gap: 4px;
-  }
-  .rv-photo-remove {
-    top: 52px;
   }
   .rv-guide,
   .rv-ideas {
