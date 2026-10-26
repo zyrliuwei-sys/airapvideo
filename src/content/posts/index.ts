@@ -14,7 +14,24 @@ import { baseLocale } from '@/paraglide/runtime.js';
 export const BLOG_POST_SLUGS = [
   'how-to-make-an-ai-rap-video',
   'best-photos-for-ai-rap-video',
+  'ai-rap-video-ideas',
+  'birthday-rap-video-with-ai',
+  'how-ai-rap-videos-work',
+  'make-a-rap-music-video-without-filming',
+  'ai-rap-video-generator-cost',
+  'best-ai-music-video-generators',
+  'best-ai-rap-generator',
+  'best-rap-duos',
+  'funny-rap-lyrics',
+  'rap-battle-roasts',
+  'rap-songs-about-friends',
+  'birthday-rap-lyrics',
+  'pet-rap-video',
+  'love-rap-lyrics',
+  'ai-rap-duo-trend-tiktok',
 ] as const;
+
+export type BlogFaq = { question: string; answer: string };
 
 export type BlogPostMeta = {
   title: string;
@@ -23,6 +40,7 @@ export type BlogPostMeta = {
   author_name?: string;
   author_image?: string;
   image?: string;
+  faq?: BlogFaq[];
 };
 
 type PostModule = {
@@ -45,6 +63,8 @@ export type BlogPost = {
 export type BlogPostDetail = BlogPost & {
   /** Raw markdown — set for database posts */
   content?: string;
+  /** FAQ rendered under the post and emitted as FAQPage JSON-LD */
+  faq?: BlogFaq[];
 };
 
 // Eagerly bundle the local MDX posts (small markdown files), mirroring the

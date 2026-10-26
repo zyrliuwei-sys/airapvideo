@@ -7,12 +7,16 @@ import { Footer } from '@/blocks/footer';
 import { Header } from '@/blocks/header';
 import { BlogCard } from '@/components/blog-card';
 import { formatPostDate } from '@/content/posts';
+import { isGuide } from '@/content/posts/guides';
 import { getBlogPostsFn } from '@/content/posts/server';
 
 export const Route = createFileRoute('/blog/')({
   loader: async () => {
     const locale = getLocale();
-    const posts = await getBlogPostsFn({ data: { locale } });
+    // Guides are listed on the homepage, not in the blog index.
+    const posts = (await getBlogPostsFn({ data: { locale } })).filter(
+      (post) => !isGuide(post.slug)
+    );
     return { locale, posts };
   },
   head: ({ loaderData }) => {

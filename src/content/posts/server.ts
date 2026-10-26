@@ -84,5 +84,6 @@ export const getBlogPostFn = createServerFn()
       authorName: meta.author_name,
       authorImage: meta.author_image,
       source: 'local',
+      faq: meta.faq,
     };
   });

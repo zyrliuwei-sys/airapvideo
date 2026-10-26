@@ -68,6 +68,7 @@
     "react": "^19.2.1",
     "react-dom": "^19.2.1",
     "recharts": "3.8.0",
+    "remark-gfm": "4.0.1",
     "replicate": "^1.0.0",
     "resend": "^4.0.0",
     "simple-flakeid": "^0.0.5",

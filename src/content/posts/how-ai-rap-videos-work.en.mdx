@@ -1,0 +1,69 @@
+export const meta = {
+  title: 'How AI Rap Videos Work: From Two Photos to a Lip-Synced Clip',
+  description:
+    'What actually happens when you turn two photos into an AI rap video: composing the stage image, animating it with sound, and why the source photos matter most.',
+  created_at: '2026-10-26',
+  author_name: 'airapvideo Team',
+  author_image: '/logo.svg',
+  image: '/imgs/blog/how-cover.jpg',
+};
+
+You upload two photos, wait a few minutes, and get back a video of both people rapping on a stage. It looks like magic, but it is two AI models doing two separate jobs. Knowing what each one does helps you get better results, and helps you understand why some videos come out better than others.
+
+## The short version
+
+1. **Compose:** an image model takes your two photos and builds one shared stage image with both people in it.
+2. **Animate:** a video model turns that still image into a 10-second clip with movement, music and vocals.
+3. **Deliver:** the finished MP4 is saved so you can download it.
+
+Each step is explained below.
+
+## Step 1: Composing the stage
+
+The two photos you upload were probably taken at different times, in different places and under different light. The first job is to put both people into one believable scene.
+
+On airapvideo, this step uses **Nano Banana**, an image model that is good at keeping a person's identity: face, hairstyle and outfit. It places one person on the left and one on the right of a shared stage, with lighting that matches across both.
+
+![A concert crowd: the composed image puts both people on one shared stage](/imgs/blog/how-crowd.jpg)
+
+This is the step where your photos matter most. The model can only keep what it can see. A blurry face, a photo taken from far away or a face half in shadow gives it less to work with, and the person in the video looks less like the real one.
+
+## Step 2: Animating with sound
+
+Once the stage image exists, a video model brings it to life. On airapvideo this is **MiniMax H3 Max Turbo**. It receives the stage image plus built-in performance instructions that describe a rap duet: an original hip-hop beat, rap vocals, mouth movements that follow the vocals, and head nods and hand gestures on the beat.
+
+The video model produces picture and audio together. That has two consequences worth knowing:
+
+- **You cannot supply your own song.** The music and vocals are generated as part of the video, from the built-in instructions.
+- **Results vary between renders.** The beat, the words and how closely the mouth follows the audio can differ each time. If one render is not quite right, a second one with the same photos can come out differently.
+
+## Step 3: Delivery
+
+Generating a 10-second video with sound takes roughly 3 to 5 minutes. While it runs, you can see the composed stage image. When it finishes, the vertical 9:16 MP4 is saved in **My videos**, ready to download without a watermark.
+
+If a render fails at any stage, the credits used for it are returned to your balance automatically.
+
+![Headphones and a phone: the finished clip is a vertical MP4 with audio](/imgs/blog/how-headphones.jpg)
+
+## Why two photos and not one?
+
+Using one photo per person, instead of a single photo of two people, gives the model a clean view of each face. It also means the two people never need to have been in the same place. Friends in different countries, a grandparent and a grandchild, or two coworkers who never took a photo together can all share a stage.
+
+## Why there are no settings
+
+Many AI video tools ask you to write a prompt, pick a style, a length and an aspect ratio. Every one of those choices is a chance to get a worse result. airapvideo fixes the format: 10 seconds, vertical 9:16, a rap duet on a stage. You choose the photos and nothing else. That is also why the photos are the main thing you can improve.
+
+## How to get a better result
+
+- **Sharp, front-facing faces.** This helps both the identity in step 1 and the mouth movement in step 2.
+- **Even light.** Soft daylight beats harsh flash.
+- **Similar framing.** Crop the two photos so they show a similar amount of each person.
+- **Swap sides if it looks off.** The left side leads the verse; the right side hypes.
+
+Our guide to [which photos work best](/blog/best-photos-for-ai-rap-video) goes into more detail, and [how to make an AI rap video](/blog/how-to-make-an-ai-rap-video) covers the full process step by step.
+
+## Using AI rap videos responsibly
+
+Because the result looks like real people, a few rules apply. Only use photos of people who agreed to it. Children should only appear if you are their parent or legal guardian. Label the video as AI-generated when you share it. Uploaded photos are processed to create your video, and temporary input uploads expire after 72 hours.
+
+Now that you know what happens behind the button, [try it with two photos](/#create).

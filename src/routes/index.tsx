@@ -47,7 +47,7 @@ export const Route = createFileRoute('/')({
         { name: 'twitter:image', content: image },
       ],
       links: [
-        // LCP: the hero clip's poster.
+        // LCP: the generator's demo clip poster.
         {
           rel: 'preload',
           as: 'image',

@@ -11,6 +11,7 @@ import { Header } from '@/blocks/header';
 import { MarkdownContent } from '@/components/markdown-content';
 import { mdxComponents } from '@/components/mdx-components';
 import { formatPostDate, loadLocalPost } from '@/content/posts';
+import { isGuide } from '@/content/posts/guides';
 import { getBlogPostFn } from '@/content/posts/server';
 
 export const Route = createFileRoute('/blog/$slug')({
@@ -28,12 +29,39 @@ export const Route = createFileRoute('/blog/$slug')({
     const canonical = localizeUrl(`${envConfigs.app_url}/blog/${post.slug}`, {
       locale: locale as any,
     }).href;
+    const faqJsonLd = post.faq?.length
+      ? {
+          '@context': 'https://schema.org',
+          '@type': 'FAQPage',
+          mainEntity: post.faq.map((item) => ({
+            '@type': 'Question',
+            name: item.question,
+            acceptedAnswer: { '@type': 'Answer', text: item.answer },
+          })),
+        }
+      : null;
     return {
       meta: [
         { title: `${post.title} | ${envConfigs.app_name}` },
         { name: 'description', content: post.description },
+        ...(post.image
+          ? [
+              {
+                property: 'og:image',
+                content: `${envConfigs.app_url}${post.image}`,
+              },
+            ]
+          : []),
       ],
       links: [{ rel: 'canonical', href: canonical }],
+      scripts: faqJsonLd
+        ? [
+            {
+              type: 'application/ld+json',
+              children: JSON.stringify(faqJsonLd),
+            },
+          ]
+        : [],
     };
   },
   component: BlogPostPage,
@@ -53,11 +81,11 @@ function BlogPostPage() {
       <main className="flex-1 px-6 py-12 md:px-8 md:py-16">
         <article className="mx-auto max-w-3xl">
           <Link
-            href="/blog"
+            href={isGuide(post.slug) ? '/#guides' : '/blog'}
             className="text-muted-foreground hover:text-foreground inline-flex items-center gap-2 text-sm font-medium transition-colors"
           >
             <ArrowLeft className="size-4" />
-            {m['blog.back_to_blog']()}
+            {isGuide(post.slug) ? m['guides.back']() : m['blog.back_to_blog']()}
           </Link>
 
           <header className="border-border mt-8 mb-6 border-b pb-6">
@@ -106,6 +134,26 @@ function BlogPostPage() {
           ) : (
             <MarkdownContent content={post.content || ''} />
           )}
+
+          {post.faq?.length ? (
+            <section className="border-border mt-12 border-t pt-8">
+              <h2 className="text-foreground text-lg font-semibold tracking-tight md:text-xl">
+                FAQ
+              </h2>
+              <dl className="mt-4 space-y-5">
+                {post.faq.map((item) => (
+                  <div key={item.question}>
+                    <dt className="text-foreground font-semibold">
+                      {item.question}
+                    </dt>
+                    <dd className="text-foreground/90 mt-1 leading-7">
+                      {item.answer}
+                    </dd>
+                  </div>
+                ))}
+              </dl>
+            </section>
+          ) : null}
         </article>
       </main>
       <Footer />

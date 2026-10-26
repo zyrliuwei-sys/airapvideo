@@ -1,4 +1,8 @@
-import type { AnchorHTMLAttributes, HTMLAttributes } from 'react';
+import type {
+  AnchorHTMLAttributes,
+  HTMLAttributes,
+  ImgHTMLAttributes,
+} from 'react';
 import type { MDXComponents } from 'mdx/types';
 
 import { cn } from '@/lib/utils';
@@ -93,5 +97,40 @@ export const mdxComponents: MDXComponents = {
   ),
   hr: ({ className, ...props }: HTMLAttributes<HTMLHRElement>) => (
     <hr className={cn('border-border my-8', className)} {...props} />
+  ),
+  table: ({ className, ...props }: HTMLAttributes<HTMLTableElement>) => (
+    <div className="border-border my-6 overflow-x-auto rounded-xl border">
+      <table className={cn('w-full text-left text-sm', className)} {...props} />
+    </div>
+  ),
+  th: ({ className, ...props }: HTMLAttributes<HTMLTableCellElement>) => (
+    <th
+      className={cn(
+        'bg-muted text-foreground border-border border-b px-3 py-2 font-semibold',
+        className
+      )}
+      {...props}
+    />
+  ),
+  td: ({ className, ...props }: HTMLAttributes<HTMLTableCellElement>) => (
+    <td
+      className={cn(
+        'border-border text-foreground/90 border-b px-3 py-2 align-top',
+        className
+      )}
+      {...props}
+    />
+  ),
+  img: ({ className, alt, ...props }: ImgHTMLAttributes<HTMLImageElement>) => (
+    <img
+      alt={alt}
+      loading="lazy"
+      decoding="async"
+      className={cn(
+        'border-border my-6 w-full rounded-2xl border object-cover',
+        className
+      )}
+      {...props}
+    />
   ),
 };

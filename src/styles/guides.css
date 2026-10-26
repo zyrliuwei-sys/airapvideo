@@ -1,0 +1,70 @@
+/* ─── Homepage guides grid ────────────────────────────────────────────── */
+.rv-guides {
+  scroll-margin-top: 68px;
+  padding: 112px var(--br-gutter);
+  border-top: 1px solid var(--br-line);
+}
+.rv-guides .rv-head {
+  margin-inline: auto;
+  text-align: center;
+}
+.rv-guides-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 250px), 1fr));
+  gap: 20px;
+  max-width: 1240px;
+  margin: 0 auto;
+}
+.rv-guide-card {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--br-line);
+  border-radius: 16px;
+  background: color-mix(in oklab, var(--br-paper) 4%, var(--br-bg));
+  color: var(--br-paper);
+  text-decoration: none;
+  transition:
+    border-color 0.2s,
+    transform 0.2s;
+}
+.rv-guide-card:hover {
+  border-color: var(--br-orange);
+  transform: translateY(-2px);
+}
+.rv-guide-card img {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 1200 / 630;
+  object-fit: cover;
+}
+.rv-guide-card-body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px 20px 20px;
+}
+.rv-guide-card-title {
+  font-size: 17px;
+  font-weight: 600;
+  line-height: 1.35;
+}
+.rv-guide-card-read {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--br-orange);
+  font-size: 15px;
+  font-weight: 600;
+}
+@media (prefers-reduced-motion: reduce) {
+  .rv-guide-card {
+    transition: none;
+  }
+  .rv-guide-card:hover {
+    transform: none;
+  }
+}

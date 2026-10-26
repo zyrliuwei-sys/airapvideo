@@ -7,6 +7,7 @@ import mdx from '@mdx-js/rollup';
 import tailwindcss from '@tailwindcss/vite';
 import viteReact from '@vitejs/plugin-react';
 import { nitro } from 'nitro/vite';
+import remarkGfm from 'remark-gfm';
 import { defineConfig } from 'vite';
 
 import { paraglideDirectImports } from './paraglide-direct-imports.mjs';
@@ -131,7 +132,13 @@ export default defineConfig({
   },
   plugins: [
     // MDX must run before the react plugin so JSX in compiled MDX gets transformed.
-    { enforce: 'pre', ...mdx({ providerImportSource: '@mdx-js/react' }) },
+    {
+      enforce: 'pre',
+      ...mdx({
+        providerImportSource: '@mdx-js/react',
+        remarkPlugins: [remarkGfm],
+      }),
+    },
     tailwindcss(),
     paraglideVitePlugin(paraglideConfig),
     paraglideDirectImports({

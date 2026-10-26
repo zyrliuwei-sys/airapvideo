@@ -71,6 +71,12 @@ async function renderWithEdgeCache(req: Request): Promise<Response> {
 // getLocale() resolves per-request (AsyncLocalStorage) during SSR.
 export default {
   async fetch(req: Request): Promise<Response> {
+    // One canonical host: send www traffic (and its links) to the apex domain.
+    const reqUrl = new URL(req.url);
+    if (reqUrl.hostname.startsWith('www.')) {
+      reqUrl.hostname = reqUrl.hostname.slice(4);
+      return Response.redirect(reqUrl.toString(), 301);
+    }
     await ensureCloudflareEnv();
     const response = await renderWithEdgeCache(req);
     response.headers.set('X-Content-Type-Options', 'nosniff');

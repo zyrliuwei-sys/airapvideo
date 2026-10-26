@@ -13,6 +13,8 @@ import {
   Smartphone,
   Upload,
   Users,
+  Volume2,
+  VolumeX,
   X,
 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -35,6 +37,7 @@ import { m } from '@/paraglide/messages.js';
 import { localizeHref } from '@/paraglide/runtime.js';
 import { useUserPermissions } from '@/hooks/use-user-permissions';
 import { Footer } from '@/blocks/footer';
+import { Guides } from '@/blocks/guides';
 import { Header } from '@/blocks/header';
 import { Pricing } from '@/blocks/pricing';
 
@@ -49,8 +52,7 @@ const clip = (name: string) => ({
   src: `/videos/examples/${name}.mp4`,
   poster: `/videos/examples/${name}.jpg`,
 });
-const heroClip = clip('besties');
-const previewClip = clip('cowork');
+const demoClip = clip('besties');
 const coupleClip = clip('couple');
 const familyClip = clip('grandpa');
 const birthdayClip = clip('bday');
@@ -86,14 +88,27 @@ function LoopVideo({
   label,
   className,
   eager,
+  muted = true,
 }: {
   src: string;
   poster: string;
   label?: string;
   className?: string;
   eager?: boolean;
+  muted?: boolean;
 }) {
   const ref = useRef<HTMLVideoElement>(null);
+  // React doesn't update the `muted` attribute after mount; set the property.
+  useEffect(() => {
+    const video = ref.current;
+    if (!video) return;
+    video.muted = muted;
+    // Unmuting is a user tap: restart the clip so the verse plays from the top.
+    if (!muted) {
+      video.currentTime = 0;
+      video.play().catch(() => {});
+    }
+  }, [muted]);
   useEffect(() => {
     const video = ref.current;
     if (!video) return;
@@ -124,9 +139,121 @@ function LoopVideo({
   );
 }
 
-// Finished duet clips shown under the hero (muted autoplay loops). Drop MP4s
-// into public/videos/examples/ and list them here; the strip hides when empty.
-const exampleVideos: { src: string; poster?: string }[] = [];
+// Finished duets shown as "what you get" (public/videos/showcase/). The
+// generator always renders the orange booth, so those clips lead the grid.
+const showcaseClip = (path: string) => ({
+  src: `/videos/${path}.mp4`,
+  poster: `/videos/${path}.jpg`,
+});
+const SHOWCASE = [
+  {
+    ...showcaseClip('showcase/orange-mic'),
+    label: m['rap.showcase.clip.orange_mic'],
+  },
+  {
+    ...showcaseClip('showcase/orange-duo'),
+    label: m['rap.showcase.clip.orange_duo'],
+    audio: true,
+  },
+  {
+    ...showcaseClip('showcase/cat-corgi'),
+    label: m['rap.showcase.clip.cat_corgi'],
+  },
+  {
+    ...showcaseClip('showcase/dog-cat'),
+    label: m['rap.showcase.clip.dog_cat'],
+    audio: true,
+  },
+  {
+    ...showcaseClip('showcase/roast-battle'),
+    label: m['rap.showcase.clip.roast'],
+    audio: true,
+  },
+  {
+    ...showcaseClip('showcase/street-grandpas'),
+    label: m['rap.showcase.clip.grandpas'],
+    audio: true,
+  },
+  {
+    ...showcaseClip('showcase/lobby-duo'),
+    label: m['rap.showcase.clip.lobby_duo'],
+    audio: true,
+  },
+  {
+    ...showcaseClip('showcase/hotel-lobby'),
+    label: m['rap.showcase.clip.hotel_lobby'],
+  },
+  { ...showcaseClip('examples/cowork'), label: m['rap.showcase.clip.cowork'] },
+  { ...showcaseClip('examples/couple'), label: m['rap.showcase.clip.rooftop'] },
+];
+// Smaller 4:5 clips for the "more ideas" wall (public/videos/showcase/more/).
+const MORE_CLIPS = Array.from({ length: 15 }, (_, i) =>
+  showcaseClip(`showcase/more/${String(i + 1).padStart(2, '0')}`)
+);
+
+/** Grid of finished duets; at most one clip plays with sound at a time. */
+function Showcase() {
+  const [voiced, setVoiced] = useState<string | null>(null);
+  return (
+    <section className="rv-showcase" aria-labelledby="showcase-heading">
+      <div className="rv-head">
+        <p className="rv-eyebrow">{m['rap.showcase.eyebrow']()}</p>
+        <h2 id="showcase-heading">{m['rap.showcase.title']()}</h2>
+        <p>{m['rap.showcase.description']()}</p>
+      </div>
+      <div className="rv-showcase-grid">
+        {SHOWCASE.map((item) => (
+          <figure key={item.src}>
+            <LoopVideo
+              src={item.src}
+              poster={item.poster}
+              label={item.label()}
+              muted={voiced !== item.src}
+            />
+            {item.audio && (
+              <button
+                type="button"
+                className="rv-showcase-sound"
+                aria-pressed={voiced === item.src}
+                aria-label={
+                  voiced === item.src
+                    ? m['rap.showcase.sound_off']()
+                    : m['rap.showcase.sound_on']()
+                }
+                onClick={() =>
+                  setVoiced((v) => (v === item.src ? null : item.src))
+                }
+              >
+                {voiced === item.src ? (
+                  <Volume2 size={16} />
+                ) : (
+                  <VolumeX size={16} />
+                )}
+              </button>
+            )}
+            <figcaption>{item.label()}</figcaption>
+          </figure>
+        ))}
+      </div>
+      <h3 className="rv-showcase-more-title">{m['rap.showcase.more']()}</h3>
+      <div className="rv-showcase-more">
+        {MORE_CLIPS.map((clip) => (
+          <LoopVideo
+            key={clip.src}
+            {...clip}
+            label={m['rap.showcase.more_alt']()}
+          />
+        ))}
+      </div>
+      <p className="rv-showcase-note">{m['rap.showcase.note']()}</p>
+      <div className="rv-actions">
+        <a href="#create" className="br-btn">
+          {m['rap.showcase.cta']()} <ArrowRight size={18} />
+        </a>
+      </div>
+    </section>
+  );
+}
 
 const INSUFFICIENT_CREDITS = 'Insufficient credits';
 
@@ -661,7 +788,8 @@ export function RapVideoPage() {
       <Header />
 
       <main>
-        <section className="rv-hero">
+        {/* Hero and generator in one place: visitors land on the upload. */}
+        <section id="create" className="rv-hero">
           <div className="rv-hero-copy">
             <p className="rv-eyebrow">{m['rap.hero.eyebrow']()}</p>
             <h1>{m['rap.hero.title']()}</h1>
@@ -672,7 +800,7 @@ export function RapVideoPage() {
               {m['rap.hero.subtitle_short']()}
             </p>
             <div className="rv-actions">
-              <a href="#create" className="br-btn">
+              <a href="#studio" className="br-btn">
                 {m['hotel.hero.cta']()} <ArrowRight size={18} />
               </a>
               <a href="#how" className="br-btn br-btn-ghost">
@@ -681,76 +809,8 @@ export function RapVideoPage() {
             </div>
             <p className="rv-hint rv-hero-note">{m['guest.hero_note']()}</p>
           </div>
-          <div className="rv-hero-stage">
-            <div className="rv-inputs" aria-hidden="true">
-              <figure>
-                <span className="rv-crop rv-crop-a" />
-                <figcaption>{m['rap.hero.photo_one']()}</figcaption>
-              </figure>
-              <figure>
-                <span className="rv-crop rv-crop-b" />
-                <figcaption>{m['rap.hero.photo_two']()}</figcaption>
-              </figure>
-            </div>
-            <div className="rv-frame">
-              {/* Poster preloaded in routes/index.tsx: keep in sync. */}
-              <LoopVideo
-                {...heroClip}
-                label={m['hotel.hero.image_alt']()}
-                eager
-              />
-              <LyricCaption />
-            </div>
-          </div>
-        </section>
-
-        <section className="rv-facts" aria-label={m['rap.facts.label']()}>
-          {(
-            [
-              [m['rap.facts.format.value'], m['rap.facts.format.text']],
-              [m['rap.facts.length.value'], m['rap.facts.length.text']],
-              [m['rap.facts.time.value'], m['rap.facts.time.text']],
-              [m['rap.facts.refund.value'], m['rap.facts.refund.text']],
-            ] as const
-          ).map(([value, text]) => (
-            <div key={value()}>
-              <strong>{value()}</strong>
-              <span>{text()}</span>
-            </div>
-          ))}
-        </section>
-
-        {exampleVideos.length > 0 && (
-          <section className="rv-examples">
-            {exampleVideos.map((video) => (
-              <video
-                key={video.src}
-                src={video.src}
-                poster={video.poster}
-                autoPlay
-                muted
-                loop
-                playsInline
-                preload="metadata"
-              />
-            ))}
-          </section>
-        )}
-
-        <section id="create" className="rv-create">
-          <div className="rv-head">
-            <h2>{m['hotel.create.title']()}</h2>
-            <p>{m['hotel.create.description']()}</p>
-          </div>
-          <div className="rv-studio">
+          <div id="studio" className="rv-studio">
             <div className="rv-studio-form">
-              <div className="rv-studio-form-heading">
-                <div>
-                  <h3>{m['hotel.create.photos']()}</h3>
-                  <p>{m['studio.upload_hint']()}</p>
-                </div>
-                <span className="rv-studio-spec">10s / 9:16</span>
-              </div>
               <div className="rv-upload-grid">
                 <PhotoInput
                   label={m['hotel.create.person_a']()}
@@ -759,6 +819,9 @@ export function RapVideoPage() {
                   onFile={changeInput(setPhotoA)}
                   disabled={running}
                 />
+                <span className="rv-op" aria-hidden="true">
+                  +
+                </span>
                 <PhotoInput
                   label={m['hotel.create.person_b']()}
                   side={m['hotel.create.right']()}
@@ -889,13 +952,15 @@ export function RapVideoPage() {
               )}
             </div>
             <aside className="rv-preview">
+              <span className="rv-op rv-op-eq" aria-hidden="true">
+                =
+              </span>
               <div className="rv-preview-heading">
                 <h3>
                   {task?.videoUrl || task?.sceneImageUrl || preview?.imageUrl
                     ? m['hotel.create.preview']()
                     : m['rap.create.example_title']()}
                 </h3>
-                <span>9:16 MP4</span>
               </div>
               <div className="rv-preview-media">
                 {task?.videoUrl ? (
@@ -921,11 +986,27 @@ export function RapVideoPage() {
                     onError={forget}
                   />
                 ) : (
-                  <LoopVideo
-                    {...previewClip}
-                    className="rv-preview-loop"
-                    label={m['rap.features.sync.alt']()}
-                  />
+                  // Idle state: the two input photos become this clip.
+                  <div className="rv-demo">
+                    {/* Poster preloaded in routes/index.tsx: keep in sync. */}
+                    <LoopVideo
+                      {...demoClip}
+                      className="rv-preview-loop"
+                      label={m['hotel.hero.image_alt']()}
+                      eager
+                    />
+                    <div className="rv-demo-inputs" aria-hidden="true">
+                      <figure>
+                        <span className="rv-crop rv-crop-a" />
+                        <figcaption>{m['rap.hero.photo_one']()}</figcaption>
+                      </figure>
+                      <figure>
+                        <span className="rv-crop rv-crop-b" />
+                        <figcaption>{m['rap.hero.photo_two']()}</figcaption>
+                      </figure>
+                    </div>
+                    <LyricCaption />
+                  </div>
                 )}
               </div>
               <p className="rv-preview-caption">
@@ -936,6 +1017,24 @@ export function RapVideoPage() {
             </aside>
           </div>
         </section>
+
+        <section className="rv-facts" aria-label={m['rap.facts.label']()}>
+          {(
+            [
+              [m['rap.facts.format.value'], m['rap.facts.format.text']],
+              [m['rap.facts.length.value'], m['rap.facts.length.text']],
+              [m['rap.facts.time.value'], m['rap.facts.time.text']],
+              [m['rap.facts.refund.value'], m['rap.facts.refund.text']],
+            ] as const
+          ).map(([value, text]) => (
+            <div key={value()}>
+              <strong>{value()}</strong>
+              <span>{text()}</span>
+            </div>
+          ))}
+        </section>
+
+        <Showcase />
 
         <section id="guide" className="rv-guide">
           <div className="rv-guide-aside">
@@ -1198,6 +1297,8 @@ export function RapVideoPage() {
             ))}
           </div>
         </section>
+
+        <Guides />
 
         <section className="rv-closing">
           <div>
