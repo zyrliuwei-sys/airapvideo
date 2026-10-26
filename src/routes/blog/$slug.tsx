@@ -11,7 +11,7 @@ import { Header } from '@/blocks/header';
 import { MarkdownContent } from '@/components/markdown-content';
 import { mdxComponents } from '@/components/mdx-components';
 import { formatPostDate, loadLocalPost } from '@/content/posts';
-import { isGuide } from '@/content/posts/guides';
+import { isGuide, PRODUCT_FACTS } from '@/content/posts/guides';
 import { getBlogPostFn } from '@/content/posts/server';
 
 export const Route = createFileRoute('/blog/$slug')({
@@ -40,28 +40,40 @@ export const Route = createFileRoute('/blog/$slug')({
           })),
         }
       : null;
+    const image = post.image ? `${envConfigs.app_url}${post.image}` : undefined;
+    const articleJsonLd = {
+      '@context': 'https://schema.org',
+      '@type': 'Article',
+      headline: post.title,
+      description: post.description,
+      image,
+      datePublished: post.createdAt,
+      dateModified: post.updatedAt ?? post.createdAt,
+      author: {
+        '@type': 'Organization',
+        name: post.authorName || envConfigs.app_name,
+        url: envConfigs.app_url,
+      },
+      publisher: {
+        '@type': 'Organization',
+        name: envConfigs.app_name,
+        logo: { '@type': 'ImageObject', url: `${envConfigs.app_url}/logo.svg` },
+      },
+      mainEntityOfPage: canonical,
+    };
     return {
       meta: [
         { title: `${post.title} | ${envConfigs.app_name}` },
         { name: 'description', content: post.description },
-        ...(post.image
-          ? [
-              {
-                property: 'og:image',
-                content: `${envConfigs.app_url}${post.image}`,
-              },
-            ]
-          : []),
+        ...(image ? [{ property: 'og:image', content: image }] : []),
       ],
       links: [{ rel: 'canonical', href: canonical }],
-      scripts: faqJsonLd
-        ? [
-            {
-              type: 'application/ld+json',
-              children: JSON.stringify(faqJsonLd),
-            },
-          ]
-        : [],
+      scripts: [articleJsonLd, ...(faqJsonLd ? [faqJsonLd] : [])].map(
+        (data) => ({
+          type: 'application/ld+json',
+          children: JSON.stringify(data),
+        })
+      ),
     };
   },
   component: BlogPostPage,
@@ -100,6 +112,13 @@ function BlogPostPage() {
                 <Calendar className="size-4" />
                 {formatPostDate(post.createdAt, locale)}
               </span>
+              {post.updatedAt && post.updatedAt !== post.createdAt && (
+                <span>
+                  {m['blog.updated']({
+                    date: formatPostDate(post.updatedAt, locale),
+                  })}
+                </span>
+              )}
               {(post.authorName || post.authorImage) && (
                 <span className="inline-flex items-center gap-2">
                   {post.authorImage && (
@@ -133,6 +152,26 @@ function BlogPostPage() {
             </div>
           ) : (
             <MarkdownContent content={post.content || ''} />
+          )}
+
+          {isGuide(post.slug) && (
+            <section className="border-border bg-muted/40 mt-12 rounded-2xl border p-6">
+              <h2 className="text-foreground text-lg font-semibold tracking-tight">
+                {m['guides.facts_title']()}
+              </h2>
+              <dl className="mt-4 grid gap-x-6 gap-y-3 text-sm sm:grid-cols-[9rem_1fr]">
+                {PRODUCT_FACTS.map((fact) => (
+                  <div key={fact.label} className="contents">
+                    <dt className="text-foreground font-semibold">
+                      {fact.label}
+                    </dt>
+                    <dd className="text-foreground/90 leading-6">
+                      {fact.value}
+                    </dd>
+                  </div>
+                ))}
+              </dl>
+            </section>
           )}
 
           {post.faq?.length ? (

@@ -2,6 +2,8 @@ import { createFileRoute } from '@tanstack/react-router';
 
 import { envConfigs } from '@/config';
 import { m } from '@/paraglide/messages.js';
+import { getLocalPosts } from '@/content/posts';
+import { isGuide, PRODUCT_FACTS } from '@/content/posts/guides';
 
 const STATIC_PAGES: { path: string; title: string; description: string }[] = [
   {
@@ -10,14 +12,10 @@ const STATIC_PAGES: { path: string; title: string; description: string }[] = [
     description: 'Turn two photos into a lip-synced AI rap music video',
   },
   {
-    path: '/blog/how-to-make-an-ai-rap-video',
-    title: 'How to Make an AI Rap Video from Two Photos',
-    description: 'Step-by-step guide from photos to a finished rap video',
-  },
-  {
-    path: '/blog/best-photos-for-ai-rap-video',
-    title: 'Which Photos Work Best for an AI Rap Video',
-    description: 'What to upload, what to avoid, and quick fixes',
+    path: '/pricing',
+    title: 'Pricing',
+    description:
+      'One-time packs: $9.90 for 1 video, $19.90 for 3, $29.90 for 5',
   },
   {
     path: '/privacy-policy',
@@ -61,12 +59,29 @@ export const Route = createFileRoute('/llms.txt')({
           '',
           `> ${m['common.metadata.description']({}, { locale: 'en' })}`,
           '',
+          '## Key facts',
+          '',
+          ...PRODUCT_FACTS.map((f) => `- ${f.label}: ${f.value}`),
+          '',
           '## Pages',
           '',
           ...STATIC_PAGES.map(
             (p) => `- [${p.title}](${app_url}${p.path}): ${p.description}`
           ),
         ];
+
+        const localPosts = getLocalPosts('en');
+        for (const [heading, list] of [
+          ['Guides', localPosts.filter((p) => isGuide(p.slug))],
+          ['Blog', localPosts.filter((p) => !isGuide(p.slug))],
+        ] as const) {
+          lines.push('', `## ${heading}`, '');
+          for (const post of list) {
+            lines.push(
+              `- [${post.title}](${app_url}/blog/${post.slug}): ${post.description}`
+            );
+          }
+        }
 
         if (posts.length > 0) {
           lines.push('', '## Blog Posts', '');

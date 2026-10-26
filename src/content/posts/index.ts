@@ -37,6 +37,8 @@ export type BlogPostMeta = {
   title: string;
   description: string;
   created_at: string;
+  /** Last substantive edit, shown on the page and in Article JSON-LD */
+  updated_at?: string;
   author_name?: string;
   author_image?: string;
   image?: string;
@@ -55,6 +57,7 @@ export type BlogPost = {
   image?: string;
   /** ISO date string — serializable across loader/server-fn boundaries */
   createdAt: string;
+  updatedAt?: string;
   authorName?: string;
   authorImage?: string;
   source: 'local' | 'db';
@@ -91,6 +94,9 @@ function localPostToItem(slug: string, meta: BlogPostMeta): BlogPost {
     description: meta.description,
     image: meta.image,
     createdAt: new Date(meta.created_at).toISOString(),
+    updatedAt: meta.updated_at
+      ? new Date(meta.updated_at).toISOString()
+      : undefined,
     authorName: meta.author_name,
     authorImage: meta.author_image,
     source: 'local',

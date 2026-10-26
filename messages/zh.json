@@ -95,5 +95,7 @@
   "guides.eyebrow": "指南",
   "guides.title": "说唱双人视频指南",
   "guides.read": "阅读",
-  "guides.back": "返回指南"
+  "guides.back": "返回指南",
+  "blog.updated": "更新于 {date}",
+  "guides.facts_title": "airapvideo 速览"
 }

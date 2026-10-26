@@ -2,6 +2,9 @@ import { createFileRoute } from '@tanstack/react-router';
 
 import { envConfigs } from '@/config';
 import { m } from '@/paraglide/messages.js';
+import { getLocalPosts } from '@/content/posts';
+import { PRODUCT_FACTS } from '@/content/posts/guides';
+import { getLocalPostMarkdown } from '@/content/posts/raw';
 
 const STATIC_PAGES: { path: string; title: string; description: string }[] = [
   {
@@ -10,14 +13,10 @@ const STATIC_PAGES: { path: string; title: string; description: string }[] = [
     description: 'Turn two photos into a lip-synced AI rap music video',
   },
   {
-    path: '/blog/how-to-make-an-ai-rap-video',
-    title: 'How to Make an AI Rap Video from Two Photos',
-    description: 'Step-by-step guide from photos to a finished rap video',
-  },
-  {
-    path: '/blog/best-photos-for-ai-rap-video',
-    title: 'Which Photos Work Best for an AI Rap Video',
-    description: 'What to upload, what to avoid, and quick fixes',
+    path: '/pricing',
+    title: 'Pricing',
+    description:
+      'One-time packs: $9.90 for 1 video, $19.90 for 3, $29.90 for 5',
   },
   {
     path: '/privacy-policy',
@@ -47,12 +46,25 @@ export const Route = createFileRoute('/llms-full.txt')({
           '',
           `> ${m['common.metadata.description']({}, { locale: 'en' })}`,
           '',
+          '## Key facts',
+          '',
+          ...PRODUCT_FACTS.map((f) => `- ${f.label}: ${f.value}`),
+          '',
           '## Pages',
           '',
           ...STATIC_PAGES.map(
             (p) => `- [${p.title}](${app_url}${p.path}): ${p.description}`
           ),
         ];
+
+        // Local MDX guides and posts, full text (images and JSX stay as-is).
+        lines.push('', '## Guides and Articles', '');
+        for (const post of getLocalPosts('en')) {
+          lines.push(`### ${post.title}`, '');
+          lines.push(`URL: ${app_url}/blog/${post.slug}`);
+          lines.push(`Description: ${post.description}`, '');
+          lines.push(getLocalPostMarkdown(post.slug, 'en'), '', '---', '');
+        }
 
         let posts: {
           slug: string;

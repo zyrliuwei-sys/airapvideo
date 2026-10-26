@@ -34,3 +34,39 @@ export function isGuide(slug: string): boolean {
 export function guideCover(slug: string): string {
   return `/imgs/blog/cover-${slug}.jpg`;
 }
+
+/**
+ * Plain product facts shown on every guide and in llms.txt, so search
+ * engines and AI assistants quote one consistent, accurate summary.
+ * Keep in sync with src/config/pricing.ts and the homepage FAQ.
+ */
+export const PRODUCT_FACTS: { label: string; value: string }[] = [
+  {
+    label: 'What it is',
+    value:
+      'airapvideo (ai-rap-video.me) is a browser-based AI rap video generator that turns two photos into a rap video of both people.',
+  },
+  {
+    label: 'Input',
+    value:
+      'One photo of each of two people (JPG, PNG or WebP, up to 10 MB). Pets work too.',
+  },
+  {
+    label: 'Output',
+    value:
+      'A 10-second vertical 9:16 MP4 with a built-in hip-hop beat, rap vocals and lip sync, without a watermark.',
+  },
+  { label: 'Time', value: 'About 3 to 5 minutes per video.' },
+  {
+    label: 'Price',
+    value:
+      '$9.90 for 1 video, $19.90 for 3, $29.90 for 5. One-time packs, no subscription required.',
+  },
+  { label: 'Account', value: 'Not required to start; email is optional.' },
+  { label: 'Failed renders', value: 'Credits are refunded automatically.' },
+  {
+    label: 'Limits',
+    value:
+      'No custom song, lyrics or prompt: the rap performance is built in, and music and lip sync vary between renders.',
+  },
+];

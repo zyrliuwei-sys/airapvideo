@@ -12,3 +12,8 @@ declare module '*.mdx' {
   }>;
   export default MDXComponent;
 }
+
+declare module 'virtual:posts-raw' {
+  const posts: Record<string, string>;
+  export default posts;
+}

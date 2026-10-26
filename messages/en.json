@@ -1204,5 +1204,7 @@
   "guides.eyebrow": "Guides",
   "guides.title": "Guides for rap duo videos",
   "guides.read": "Read",
-  "guides.back": "Back to guides"
+  "guides.back": "Back to guides",
+  "blog.updated": "Updated {date}",
+  "guides.facts_title": "airapvideo at a glance"
 }

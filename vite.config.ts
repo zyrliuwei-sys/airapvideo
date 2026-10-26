@@ -1,5 +1,5 @@
 import { execSync } from 'node:child_process';
-import { readFileSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { tanstackStart } from '@tanstack/react-start/plugin/vite';
 import { paraglideVitePlugin } from '@inlang/paraglide-js';
@@ -131,6 +131,24 @@ export default defineConfig({
       : {},
   },
   plugins: [
+    // Raw markdown of the local blog posts for llms-full.txt, read from disk
+    // so it never goes through the MDX compiler.
+    {
+      name: 'posts-raw',
+      resolveId: (id) => (id === 'virtual:posts-raw' ? '\0posts-raw' : null),
+      load(id) {
+        if (id !== '\0posts-raw') return null;
+        const dir = fileURLToPath(
+          new URL('./src/content/posts/', import.meta.url)
+        );
+        const files = readdirSync(dir).filter((f) => f.endsWith('.mdx'));
+        for (const f of files) this.addWatchFile(dir + f);
+        const map = Object.fromEntries(
+          files.map((f) => [f, readFileSync(dir + f, 'utf8')])
+        );
+        return `export default ${JSON.stringify(map)};`;
+      },
+    },
     // MDX must run before the react plugin so JSX in compiled MDX gets transformed.
     {
       enforce: 'pre',
