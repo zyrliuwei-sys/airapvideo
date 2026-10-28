@@ -41,6 +41,18 @@ export function Header() {
     { href: '/#faq', label: m['hotel.nav.faq']() },
   ];
 
+  // Featured landing page, shown as a highlighted pill.
+  const feature = (className: string) => (
+    <Link
+      href="/tiny-desk-ai"
+      className={`br-feature ${className}`}
+      onClick={() => setOpen(false)}
+    >
+      {m['tinydesk.nav']()}
+      <span className="br-feature-badge">{m['tinydesk.nav_badge']()}</span>
+    </Link>
+  );
+
   return (
     <header className="br-header">
       <div className="br-header-inner">
@@ -57,6 +69,7 @@ export function Header() {
           className={open ? 'br-nav br-nav-open' : 'br-nav'}
           aria-label={m['hotel.nav_label']()}
         >
+          {feature('br-feature-nav')}
           {links.map((link) => (
             <a
               key={link.href}
@@ -78,6 +91,8 @@ export function Header() {
           )}
         </nav>
         <div className="br-header-actions">
+          {/* Phones: the menu is collapsed, so the pill sits in the bar. */}
+          {feature('br-feature-bar')}
           {user ? (
             <Suspense fallback={<span className="block size-9" />}>
               <SiteUserMenu

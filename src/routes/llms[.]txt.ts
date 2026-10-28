@@ -12,6 +12,12 @@ const STATIC_PAGES: { path: string; title: string; description: string }[] = [
     description: 'Turn two photos into a lip-synced AI rap music video',
   },
   {
+    path: '/tiny-desk-ai',
+    title: 'Tiny Desk AI Video Generator',
+    description:
+      'Turn two photos into a Tiny Desk-style desk concert video with a live band',
+  },
+  {
     path: '/pricing',
     title: 'Pricing',
     description:

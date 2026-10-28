@@ -275,8 +275,10 @@ export function Pricing({
         credits: plan.credits,
         credits_valid_days: plan.creditsValidDays,
         payment_provider: provider,
-        // Come back to the page the user paid from.
-        redirect: purchaseId ? '/#create' : currentPathWithQuery('/videos'),
+        // Come back to the page the user paid from (the generator for a video).
+        redirect: purchaseId
+          ? `${currentPathWithQuery('/').split('?')[0]}#create`
+          : currentPathWithQuery('/videos'),
       });
     },
     onSuccess: (data) => {

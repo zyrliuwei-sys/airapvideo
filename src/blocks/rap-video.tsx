@@ -1,4 +1,11 @@
-import { lazy, Suspense, useEffect, useRef, useState } from 'react';
+import {
+  lazy,
+  Suspense,
+  useEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   ArrowRight,
@@ -83,7 +90,7 @@ const IDEAS = [
 ];
 
 /** Muted looping clip that only plays while it is on screen. */
-function LoopVideo({
+export function LoopVideo({
   src,
   poster,
   label,
@@ -490,7 +497,63 @@ function PhotoInput({
   );
 }
 
-export function RapVideoPage() {
+/** Scene look sent to the generator; must match the server's SceneStyle. */
+export type StudioStyle = 'duet' | 'tinydesk';
+
+/** Hero copy and idle demo clip for a landing page other than the homepage. */
+export type StudioCopy = {
+  eyebrow: string;
+  title: string;
+  subtitle: string;
+  secondary: { href: string; label: string };
+  demo: { src: string; poster: string };
+  closing: { title: string; text: string; cta: string };
+  /** Facts strip: replaces the homepage's "10 sec · rap duet" line */
+  lengthText: string;
+  /** Generator wording: hero button, Create button and the two photo slots */
+  cta: string;
+  generate: string;
+  slots: { a: string; b: string; left: string; right: string };
+  /** Status line before / after the required photos are in */
+  hint: string;
+  ready: string;
+  done: string;
+  /** Caption under the idle sample clip */
+  exampleNote: string;
+  /**
+   * Looks the visitor picks from, each shown by its sample clip (replaces
+   * `demo` while idle). Styles without `needsTwo` make the second photo
+   * optional; its slot is then labelled `optional`.
+   */
+  styles?: {
+    title: string;
+    optional: string;
+    options: {
+      id: string;
+      label: string;
+      src: string;
+      poster: string;
+      needsTwo: boolean;
+    }[];
+  };
+};
+
+/**
+ * The generator page. With no props it is the homepage; a landing page
+ * passes its scene `style`, hero `copy` and its own sections, which replace
+ * the homepage content above (`content`) and below (`afterPricing`) pricing.
+ */
+export function RapVideoPage({
+  style = 'duet',
+  copy,
+  content,
+  afterPricing,
+}: {
+  style?: StudioStyle;
+  copy?: StudioCopy;
+  content?: ReactNode;
+  afterPricing?: ReactNode;
+} = {}) {
   const [photoA, setPhotoA] = useState<File | null>(null);
   const [photoB, setPhotoB] = useState<File | null>(null);
   const size = DEFAULT_DUET_SIZE;
@@ -502,7 +565,10 @@ export function RapVideoPage() {
   const [activeIdea, setActiveIdea] = useState(0);
   const { data: session } = useSession();
   const user = session?.user;
-  const canGenerate = !!photoA && !!photoB;
+  const [variant, setVariant] = useState(copy?.styles?.options[0]?.id);
+  const look = copy?.styles?.options.find((o) => o.id === variant);
+  const secondOptional = !!look && !look.needsTwo;
+  const canGenerate = !!photoA && (!!photoB || secondOptional);
   const queryClient = useQueryClient();
   const [paywall, setPaywall] = useState(false);
   // Mount the (lazy) paywall dialog on first open and keep it mounted, so
@@ -539,7 +605,10 @@ export function RapVideoPage() {
   }, []);
   // Funnel step 1 (first-party event table + GA). The page HTML is
   // edge-cached, so the view is counted from the browser.
-  useEffect(() => track('hl_home_view'), []);
+  useEffect(
+    () => track('hl_home_view', copy ? { page: style } : undefined),
+    []
+  );
   // Arriving at /#create (e.g. straight after sign-in / sign-up): the browser's
   // own anchor jump fires before images settle the layout, so scroll again.
   useEffect(() => {
@@ -617,9 +686,11 @@ export function RapVideoPage() {
       '/api/hotel-lobby/purchase',
       {
         photoA: await toDataUrl(photoA!),
-        photoB: await toDataUrl(photoB!),
+        photoB: photoB ? await toDataUrl(photoB) : undefined,
         size,
         length,
+        style,
+        variant,
         email,
       }
     );
@@ -675,9 +746,11 @@ export function RapVideoPage() {
     mutationFn: async () =>
       apiPost<DuetTask>('/api/hotel-lobby/generate', {
         photoA: await toDataUrl(photoA!),
-        photoB: await toDataUrl(photoB!),
+        photoB: photoB ? await toDataUrl(photoB) : undefined,
         size,
         length,
+        style,
+        variant,
       }),
     onSuccess: (task) => {
       setPreviewId(undefined);
@@ -804,30 +877,68 @@ export function RapVideoPage() {
         {/* Hero and generator in one place: visitors land on the upload. */}
         <section id="create" className="rv-hero">
           <div className="rv-hero-copy">
-            <p className="rv-eyebrow">{m['rap.hero.eyebrow']()}</p>
-            <h1>{m['rap.hero.title']()}</h1>
-            <p className="rv-hero-sub rv-hero-sub-long">
-              {m['rap.hero.subtitle']()}
+            <p className="rv-eyebrow">
+              {copy ? copy.eyebrow : m['rap.hero.eyebrow']()}
             </p>
-            <p className="rv-hero-sub rv-hero-sub-short">
-              {m['rap.hero.subtitle_short']()}
-            </p>
+            <h1>{copy ? copy.title : m['rap.hero.title']()}</h1>
+            {copy ? (
+              <p className="rv-hero-sub">{copy.subtitle}</p>
+            ) : (
+              <>
+                <p className="rv-hero-sub rv-hero-sub-long">
+                  {m['rap.hero.subtitle']()}
+                </p>
+                <p className="rv-hero-sub rv-hero-sub-short">
+                  {m['rap.hero.subtitle_short']()}
+                </p>
+              </>
+            )}
             <div className="rv-actions">
               <a href="#studio" className="br-btn">
-                {m['hotel.hero.cta']()} <ArrowRight size={18} />
+                {copy ? copy.cta : m['hotel.hero.cta']()}{' '}
+                <ArrowRight size={18} />
               </a>
-              <a href="#how" className="br-btn br-btn-ghost">
-                {m['rap.hero.secondary']()}
+              <a
+                href={copy ? copy.secondary.href : '#how'}
+                className="br-btn br-btn-ghost"
+              >
+                {copy ? copy.secondary.label : m['rap.hero.secondary']()}
               </a>
             </div>
             <p className="rv-hint rv-hero-note">{m['guest.hero_note']()}</p>
           </div>
           <div id="studio" className="rv-studio">
             <div className="rv-studio-form">
+              {copy?.styles && (
+                <fieldset className="rv-styles" disabled={running}>
+                  <legend>{copy.styles.title}</legend>
+                  <div className="rv-styles-list">
+                    {copy.styles.options.map((option) => (
+                      <button
+                        key={option.id}
+                        type="button"
+                        className="rv-style"
+                        aria-pressed={option.id === variant}
+                        onClick={() => changeInput(setVariant)(option.id)}
+                      >
+                        <img
+                          src={option.poster}
+                          alt=""
+                          width={540}
+                          height={960}
+                          loading="lazy"
+                          decoding="async"
+                        />
+                        <span>{option.label}</span>
+                      </button>
+                    ))}
+                  </div>
+                </fieldset>
+              )}
               <div className="rv-upload-grid">
                 <PhotoInput
-                  label={m['hotel.create.person_a']()}
-                  side={m['hotel.create.left']()}
+                  label={copy ? copy.slots.a : m['hotel.create.person_a']()}
+                  side={copy ? copy.slots.left : m['hotel.create.left']()}
                   file={photoA}
                   onFile={changeInput(setPhotoA)}
                   disabled={running}
@@ -836,8 +947,14 @@ export function RapVideoPage() {
                   +
                 </span>
                 <PhotoInput
-                  label={m['hotel.create.person_b']()}
-                  side={m['hotel.create.right']()}
+                  label={copy ? copy.slots.b : m['hotel.create.person_b']()}
+                  side={
+                    secondOptional
+                      ? copy!.styles!.optional
+                      : copy
+                        ? copy.slots.right
+                        : m['hotel.create.right']()
+                  }
                   file={photoB}
                   onFile={changeInput(setPhotoB)}
                   disabled={running}
@@ -890,7 +1007,7 @@ export function RapVideoPage() {
                       {running && (
                         <Loader2 size={17} className="animate-spin" />
                       )}
-                      {m['hotel.create.generate']()}
+                      {copy ? copy.generate : m['hotel.create.generate']()}
                       {!running && <ArrowRight size={17} />}
                     </button>
                   )}
@@ -953,7 +1070,9 @@ export function RapVideoPage() {
                   {error
                     ? `${m['hotel.create.failed']()}: ${error}`
                     : task?.status === 'success'
-                      ? m['hotel.create.done']()
+                      ? copy
+                        ? copy.done
+                        : m['hotel.create.done']()
                       : generate.isPending
                         ? m['hotel.create.submitting']()
                         : task?.stage === 'motion'
@@ -964,9 +1083,13 @@ export function RapVideoPage() {
                               ? m['hotel.create.preview_ready']({ credits })
                               : previewRunning
                                 ? m['hotel.create.submitting']()
-                                : photoA && photoB
-                                  ? m['hotel.create.ready']()
-                                  : m['hotel.create.hint']()}
+                                : canGenerate
+                                  ? copy
+                                    ? copy.ready
+                                    : m['hotel.create.ready']()
+                                  : copy
+                                    ? copy.hint
+                                    : m['hotel.create.hint']()}
                 </p>
               )}
             </div>
@@ -1004,6 +1127,17 @@ export function RapVideoPage() {
                     label={m['hotel.create.watermark']()}
                     onError={forget}
                   />
+                ) : copy ? (
+                  <div className="rv-demo">
+                    <LoopVideo
+                      key={(look ?? copy.demo).src}
+                      src={(look ?? copy.demo).src}
+                      poster={(look ?? copy.demo).poster}
+                      className="rv-preview-loop"
+                      label={copy.title}
+                      eager
+                    />
+                  </div>
                 ) : (
                   // Idle state: the two input photos become this clip.
                   <div className="rv-demo">
@@ -1031,7 +1165,9 @@ export function RapVideoPage() {
               <p className="rv-preview-caption">
                 {task?.videoUrl || task?.sceneImageUrl || preview?.imageUrl
                   ? m['studio.result_note']()
-                  : m['studio.example_note']()}
+                  : copy
+                    ? copy.exampleNote
+                    : m['studio.example_note']()}
               </p>
             </aside>
           </div>
@@ -1041,7 +1177,10 @@ export function RapVideoPage() {
           {(
             [
               [m['rap.facts.format.value'], m['rap.facts.format.text']],
-              [m['rap.facts.length.value'], m['rap.facts.length.text']],
+              [
+                m['rap.facts.length.value'],
+                copy ? () => copy.lengthText : m['rap.facts.length.text'],
+              ],
               [m['rap.facts.time.value'], m['rap.facts.time.text']],
               [m['rap.facts.refund.value'], m['rap.facts.refund.text']],
             ] as const
@@ -1053,175 +1192,181 @@ export function RapVideoPage() {
           ))}
         </section>
 
-        <Showcase />
+        {content ?? (
+          <>
+            <Showcase />
 
-        <section id="guide" className="rv-guide">
-          <div className="rv-guide-aside">
-            <p className="rv-eyebrow">{m['rap.guide.eyebrow']()}</p>
-            <h2>{m['rap.guide.title']()}</h2>
-            <nav aria-label={m['rap.guide.toc']()}>
-              <a href="#what-is">{m['rap.guide.what.title']()}</a>
-              <a href="#how-works">{m['rap.guide.works.title']()}</a>
-              <a href="#make">{m['rap.guide.make.title']()}</a>
-              <a href="#why">{m['rap.guide.why.title']()}</a>
-              <a href="#best">{m['rap.guide.best.title']()}</a>
-            </nav>
-          </div>
-          <article className="rv-guide-body">
-            <h3 id="what-is">{m['rap.guide.what.title']()}</h3>
-            <p>{m['rap.guide.what.one']()}</p>
-            <p>{m['rap.guide.what.two']()}</p>
-            <h3 id="how-works">{m['rap.guide.works.title']()}</h3>
-            <p>{m['rap.guide.works.one']()}</p>
-            <p>{m['rap.guide.works.two']()}</p>
-            <h3 id="make">{m['rap.guide.make.title']()}</h3>
-            <p>{m['rap.guide.make.one']()}</p>
-            <h3 id="why">{m['rap.guide.why.title']()}</h3>
-            <p>{m['rap.guide.why.one']()}</p>
-            <h3 id="best">{m['rap.guide.best.title']()}</h3>
-            <p>{m['rap.guide.best.one']()}</p>
-            <p className="rv-guide-more">
-              {m['rap.guide.more']()}{' '}
-              <Link href="/blog/how-to-make-an-ai-rap-video">
-                {m['rap.guide.link_make']()}
-              </Link>
-              {', '}
-              <Link href="/blog/best-photos-for-ai-rap-video">
-                {m['rap.guide.link_photos']()}
-              </Link>
-              {m['rap.guide.link_and']()}
-              <Link href="/pricing">{m['rap.guide.pricing_link']()}</Link>.
-            </p>
-          </article>
-        </section>
+            <section id="guide" className="rv-guide">
+              <div className="rv-guide-aside">
+                <p className="rv-eyebrow">{m['rap.guide.eyebrow']()}</p>
+                <h2>{m['rap.guide.title']()}</h2>
+                <nav aria-label={m['rap.guide.toc']()}>
+                  <a href="#what-is">{m['rap.guide.what.title']()}</a>
+                  <a href="#how-works">{m['rap.guide.works.title']()}</a>
+                  <a href="#make">{m['rap.guide.make.title']()}</a>
+                  <a href="#why">{m['rap.guide.why.title']()}</a>
+                  <a href="#best">{m['rap.guide.best.title']()}</a>
+                </nav>
+              </div>
+              <article className="rv-guide-body">
+                <h3 id="what-is">{m['rap.guide.what.title']()}</h3>
+                <p>{m['rap.guide.what.one']()}</p>
+                <p>{m['rap.guide.what.two']()}</p>
+                <h3 id="how-works">{m['rap.guide.works.title']()}</h3>
+                <p>{m['rap.guide.works.one']()}</p>
+                <p>{m['rap.guide.works.two']()}</p>
+                <h3 id="make">{m['rap.guide.make.title']()}</h3>
+                <p>{m['rap.guide.make.one']()}</p>
+                <h3 id="why">{m['rap.guide.why.title']()}</h3>
+                <p>{m['rap.guide.why.one']()}</p>
+                <h3 id="best">{m['rap.guide.best.title']()}</h3>
+                <p>{m['rap.guide.best.one']()}</p>
+                <p className="rv-guide-more">
+                  {m['rap.guide.more']()}{' '}
+                  <Link href="/blog/how-to-make-an-ai-rap-video">
+                    {m['rap.guide.link_make']()}
+                  </Link>
+                  {', '}
+                  <Link href="/blog/best-photos-for-ai-rap-video">
+                    {m['rap.guide.link_photos']()}
+                  </Link>
+                  {m['rap.guide.link_and']()}
+                  <Link href="/pricing">{m['rap.guide.pricing_link']()}</Link>.
+                </p>
+              </article>
+            </section>
 
-        <section className="rv-features" aria-labelledby="features-heading">
-          <div className="rv-head">
-            <h2 id="features-heading">{m['rap.features.title']()}</h2>
-          </div>
-          <div className="rv-bento">
-            <article className="rv-cell rv-cell-wide">
-              <AudioLines size={22} />
-              <h3>{m['rap.features.sync.title']()}</h3>
-              <p>{m['rap.features.sync.text']()}</p>
-            </article>
-            <article className="rv-cell">
-              <Users size={22} />
-              <h3>{m['rap.features.duo.title']()}</h3>
-              <p>{m['rap.features.duo.text']()}</p>
-            </article>
-            <article className="rv-cell">
-              <Smartphone size={22} />
-              <h3>{m['rap.features.app.title']()}</h3>
-              <p>{m['rap.features.app.text']()}</p>
-            </article>
-            <article className="rv-cell rv-cell-wide rv-cell-accent">
-              <Clapperboard size={22} />
-              <h3>{m['rap.features.stage.title']()}</h3>
-              <p>{m['rap.features.stage.text']()}</p>
-            </article>
-            <article className="rv-cell rv-cell-half">
-              <RotateCcw size={22} />
-              <h3>{m['rap.features.refund.title']()}</h3>
-              <p>{m['rap.features.refund.text']()}</p>
-            </article>
-            <article className="rv-cell rv-cell-half">
-              <Lock size={22} />
-              <h3>{m['rap.features.privacy.title']()}</h3>
-              <p>{m['rap.features.privacy.text']()}</p>
-            </article>
-          </div>
-        </section>
+            <section className="rv-features" aria-labelledby="features-heading">
+              <div className="rv-head">
+                <h2 id="features-heading">{m['rap.features.title']()}</h2>
+              </div>
+              <div className="rv-bento">
+                <article className="rv-cell rv-cell-wide">
+                  <AudioLines size={22} />
+                  <h3>{m['rap.features.sync.title']()}</h3>
+                  <p>{m['rap.features.sync.text']()}</p>
+                </article>
+                <article className="rv-cell">
+                  <Users size={22} />
+                  <h3>{m['rap.features.duo.title']()}</h3>
+                  <p>{m['rap.features.duo.text']()}</p>
+                </article>
+                <article className="rv-cell">
+                  <Smartphone size={22} />
+                  <h3>{m['rap.features.app.title']()}</h3>
+                  <p>{m['rap.features.app.text']()}</p>
+                </article>
+                <article className="rv-cell rv-cell-wide rv-cell-accent">
+                  <Clapperboard size={22} />
+                  <h3>{m['rap.features.stage.title']()}</h3>
+                  <p>{m['rap.features.stage.text']()}</p>
+                </article>
+                <article className="rv-cell rv-cell-half">
+                  <RotateCcw size={22} />
+                  <h3>{m['rap.features.refund.title']()}</h3>
+                  <p>{m['rap.features.refund.text']()}</p>
+                </article>
+                <article className="rv-cell rv-cell-half">
+                  <Lock size={22} />
+                  <h3>{m['rap.features.privacy.title']()}</h3>
+                  <p>{m['rap.features.privacy.text']()}</p>
+                </article>
+              </div>
+            </section>
 
-        <section id="how" className="rv-how">
-          <div className="rv-head">
-            <h2>{m['rap.how.title']()}</h2>
-          </div>
-          <ol className="rv-timeline">
-            <li>
-              <Upload size={22} />
-              <h3>{m['rap.how.one.title']()}</h3>
-              <p>{m['rap.how.one.text']()}</p>
-            </li>
-            <li>
-              <Crop size={22} />
-              <h3>{m['rap.how.two.title']()}</h3>
-              <p>{m['rap.how.two.text']()}</p>
-            </li>
-            <li>
-              <Clapperboard size={22} />
-              <h3>{m['rap.how.three.title']()}</h3>
-              <p>{m['rap.how.three.text']()}</p>
-            </li>
-          </ol>
-        </section>
-
-        <section id="ideas" className="rv-ideas">
-          <div className="rv-ideas-media">
-            {IDEAS.map((idea, index) => (
-              <LoopVideo
-                key={idea.name}
-                src={idea.src}
-                poster={idea.poster}
-                label={idea.title()}
-                className={index === activeIdea ? 'rv-idea-on' : undefined}
-              />
-            ))}
-          </div>
-          <div className="rv-ideas-copy">
-            <h2>
-              <span className="rv-d-only">{m['rap.ideas.title']()}</span>
-              <span className="rv-m-only">{m['rap.ideas.title_short']()}</span>
-            </h2>
-            <p className="rv-ideas-lede">{m['rap.ideas.description']()}</p>
-            <ul>
-              {IDEAS.map((idea, index) => (
-                <li key={idea.name}>
-                  <button
-                    type="button"
-                    aria-pressed={index === activeIdea}
-                    onClick={() => setActiveIdea(index)}
-                    onMouseEnter={() => setActiveIdea(index)}
-                  >
-                    <strong>{idea.title()}</strong>
-                    <span className="rv-d-only">{idea.text()}</span>
-                    <span className="rv-m-only">{idea.short()}</span>
-                  </button>
+            <section id="how" className="rv-how">
+              <div className="rv-head">
+                <h2>{m['rap.how.title']()}</h2>
+              </div>
+              <ol className="rv-timeline">
+                <li>
+                  <Upload size={22} />
+                  <h3>{m['rap.how.one.title']()}</h3>
+                  <p>{m['rap.how.one.text']()}</p>
                 </li>
-              ))}
-            </ul>
-          </div>
-        </section>
+                <li>
+                  <Crop size={22} />
+                  <h3>{m['rap.how.two.title']()}</h3>
+                  <p>{m['rap.how.two.text']()}</p>
+                </li>
+                <li>
+                  <Clapperboard size={22} />
+                  <h3>{m['rap.how.three.title']()}</h3>
+                  <p>{m['rap.how.three.text']()}</p>
+                </li>
+              </ol>
+            </section>
 
-        <section className="rv-tips" aria-labelledby="tips-heading">
-          <div className="rv-head">
-            <h2 id="tips-heading">{m['rap.tips.title']()}</h2>
-          </div>
-          <div className="rv-tips-grid">
-            <div>
-              <h3>
-                <Check size={18} /> {m['rap.tips.good.title']()}
-              </h3>
-              <ul>
-                <li>{m['rap.tips.good.one']()}</li>
-                <li>{m['rap.tips.good.two']()}</li>
-                <li>{m['rap.tips.good.three']()}</li>
-                <li>{m['rap.tips.good.four']()}</li>
-              </ul>
-            </div>
-            <div>
-              <h3>
-                <X size={18} /> {m['rap.tips.bad.title']()}
-              </h3>
-              <ul>
-                <li>{m['rap.tips.bad.one']()}</li>
-                <li>{m['rap.tips.bad.two']()}</li>
-                <li>{m['rap.tips.bad.three']()}</li>
-                <li>{m['rap.tips.bad.four']()}</li>
-              </ul>
-            </div>
-          </div>
-        </section>
+            <section id="ideas" className="rv-ideas">
+              <div className="rv-ideas-media">
+                {IDEAS.map((idea, index) => (
+                  <LoopVideo
+                    key={idea.name}
+                    src={idea.src}
+                    poster={idea.poster}
+                    label={idea.title()}
+                    className={index === activeIdea ? 'rv-idea-on' : undefined}
+                  />
+                ))}
+              </div>
+              <div className="rv-ideas-copy">
+                <h2>
+                  <span className="rv-d-only">{m['rap.ideas.title']()}</span>
+                  <span className="rv-m-only">
+                    {m['rap.ideas.title_short']()}
+                  </span>
+                </h2>
+                <p className="rv-ideas-lede">{m['rap.ideas.description']()}</p>
+                <ul>
+                  {IDEAS.map((idea, index) => (
+                    <li key={idea.name}>
+                      <button
+                        type="button"
+                        aria-pressed={index === activeIdea}
+                        onClick={() => setActiveIdea(index)}
+                        onMouseEnter={() => setActiveIdea(index)}
+                      >
+                        <strong>{idea.title()}</strong>
+                        <span className="rv-d-only">{idea.text()}</span>
+                        <span className="rv-m-only">{idea.short()}</span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </section>
+
+            <section className="rv-tips" aria-labelledby="tips-heading">
+              <div className="rv-head">
+                <h2 id="tips-heading">{m['rap.tips.title']()}</h2>
+              </div>
+              <div className="rv-tips-grid">
+                <div>
+                  <h3>
+                    <Check size={18} /> {m['rap.tips.good.title']()}
+                  </h3>
+                  <ul>
+                    <li>{m['rap.tips.good.one']()}</li>
+                    <li>{m['rap.tips.good.two']()}</li>
+                    <li>{m['rap.tips.good.three']()}</li>
+                    <li>{m['rap.tips.good.four']()}</li>
+                  </ul>
+                </div>
+                <div>
+                  <h3>
+                    <X size={18} /> {m['rap.tips.bad.title']()}
+                  </h3>
+                  <ul>
+                    <li>{m['rap.tips.bad.one']()}</li>
+                    <li>{m['rap.tips.bad.two']()}</li>
+                    <li>{m['rap.tips.bad.three']()}</li>
+                    <li>{m['rap.tips.bad.four']()}</li>
+                  </ul>
+                </div>
+              </div>
+            </section>
+          </>
+        )}
 
         <div className="rv-pricing">
           <Pricing
@@ -1239,92 +1384,99 @@ export function RapVideoPage() {
           </Suspense>
         )}
 
-        <section id="faq" className="rv-faq" aria-labelledby="faq-heading">
-          <div className="rv-head">
-            <p className="rv-eyebrow">{m['rap.faq.eyebrow']()}</p>
-            <h2 id="faq-heading">{m['rap.faq.title']()}</h2>
-          </div>
-          <div className="rv-faq-list">
-            {/* Static message refs: a template-literal key (m[`…${x}`])
+        {afterPricing ?? (
+          <>
+            <section id="faq" className="rv-faq" aria-labelledby="faq-heading">
+              <div className="rv-head">
+                <p className="rv-eyebrow">{m['rap.faq.eyebrow']()}</p>
+                <h2 id="faq-heading">{m['rap.faq.title']()}</h2>
+              </div>
+              <div className="rv-faq-list">
+                {/* Static message refs: a template-literal key (m[`…${x}`])
                 pulls every message of both locales into the client bundle. */}
-            {[
-              [
-                m['rap.faq.one.question'],
-                m['rap.faq.one.answer'],
-                m['rap.faq.one.question_short'],
-                m['rap.faq.one.answer_short'],
-              ],
-              [
-                m['rap.faq.two.question'],
-                m['rap.faq.two.answer'],
-                m['rap.faq.two.question_short'],
-                m['rap.faq.two.answer_short'],
-              ],
-              [
-                m['rap.faq.three.question'],
-                m['rap.faq.three.answer'],
-                m['rap.faq.three.question_short'],
-                m['rap.faq.three.answer_short'],
-              ],
-              [
-                m['rap.faq.four.question'],
-                m['rap.faq.four.answer'],
-                m['rap.faq.four.question_short'],
-                m['rap.faq.four.answer_short'],
-              ],
-              [
-                m['rap.faq.five.question'],
-                m['rap.faq.five.answer'],
-                m['rap.faq.five.question_short'],
-                m['rap.faq.five.answer_short'],
-              ],
-              [
-                m['rap.faq.six.question'],
-                m['rap.faq.six.answer'],
-                m['rap.faq.six.question_short'],
-                m['rap.faq.six.answer_short'],
-              ],
-              [
-                m['rap.faq.seven.question'],
-                m['rap.faq.seven.answer'],
-                m['rap.faq.seven.question_short'],
-                m['rap.faq.seven.answer_short'],
-              ],
-              [
-                m['rap.faq.eight.question'],
-                m['rap.faq.eight.answer'],
-                m['rap.faq.eight.question_short'],
-                m['rap.faq.eight.answer_short'],
-              ],
-              [
-                m['rap.faq.nine.question'],
-                m['rap.faq.nine.answer'],
-                m['rap.faq.nine.question_short'],
-                m['rap.faq.nine.answer_short'],
-              ],
-            ].map(([question, answer, questionShort, answerShort], item) => (
-              <details key={item}>
-                <summary>
-                  <span className="rv-d-only">{question()}</span>
-                  <span className="rv-m-only">{questionShort()}</span>
-                </summary>
-                <p>
-                  <span className="rv-d-only">{answer()}</span>
-                  <span className="rv-m-only">{answerShort()}</span>
-                </p>
-              </details>
-            ))}
-          </div>
-        </section>
+                {[
+                  [
+                    m['rap.faq.one.question'],
+                    m['rap.faq.one.answer'],
+                    m['rap.faq.one.question_short'],
+                    m['rap.faq.one.answer_short'],
+                  ],
+                  [
+                    m['rap.faq.two.question'],
+                    m['rap.faq.two.answer'],
+                    m['rap.faq.two.question_short'],
+                    m['rap.faq.two.answer_short'],
+                  ],
+                  [
+                    m['rap.faq.three.question'],
+                    m['rap.faq.three.answer'],
+                    m['rap.faq.three.question_short'],
+                    m['rap.faq.three.answer_short'],
+                  ],
+                  [
+                    m['rap.faq.four.question'],
+                    m['rap.faq.four.answer'],
+                    m['rap.faq.four.question_short'],
+                    m['rap.faq.four.answer_short'],
+                  ],
+                  [
+                    m['rap.faq.five.question'],
+                    m['rap.faq.five.answer'],
+                    m['rap.faq.five.question_short'],
+                    m['rap.faq.five.answer_short'],
+                  ],
+                  [
+                    m['rap.faq.six.question'],
+                    m['rap.faq.six.answer'],
+                    m['rap.faq.six.question_short'],
+                    m['rap.faq.six.answer_short'],
+                  ],
+                  [
+                    m['rap.faq.seven.question'],
+                    m['rap.faq.seven.answer'],
+                    m['rap.faq.seven.question_short'],
+                    m['rap.faq.seven.answer_short'],
+                  ],
+                  [
+                    m['rap.faq.eight.question'],
+                    m['rap.faq.eight.answer'],
+                    m['rap.faq.eight.question_short'],
+                    m['rap.faq.eight.answer_short'],
+                  ],
+                  [
+                    m['rap.faq.nine.question'],
+                    m['rap.faq.nine.answer'],
+                    m['rap.faq.nine.question_short'],
+                    m['rap.faq.nine.answer_short'],
+                  ],
+                ].map(
+                  ([question, answer, questionShort, answerShort], item) => (
+                    <details key={item}>
+                      <summary>
+                        <span className="rv-d-only">{question()}</span>
+                        <span className="rv-m-only">{questionShort()}</span>
+                      </summary>
+                      <p>
+                        <span className="rv-d-only">{answer()}</span>
+                        <span className="rv-m-only">{answerShort()}</span>
+                      </p>
+                    </details>
+                  )
+                )}
+              </div>
+            </section>
 
-        <Guides />
+            <Guides />
+          </>
+        )}
 
         <section className="rv-closing">
           <div>
-            <h2>{m['rap.bottom.title']()}</h2>
-            <p>{m['rap.bottom.text']()}</p>
+            <h2>{copy ? copy.closing.title : m['rap.bottom.title']()}</h2>
+            <p>{copy ? copy.closing.text : m['rap.bottom.text']()}</p>
             <a className="br-btn" href="#create">
-              {m['hotel.hero.cta']()} <ArrowRight size={18} />
+              {copy ? copy.closing.cta : m['hotel.hero.cta']()}{' '}
+              <ArrowRight size={18} />
             </a>
           </div>
         </section>

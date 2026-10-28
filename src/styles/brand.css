@@ -391,3 +391,70 @@
     display: none;
   }
 }
+
+/* Featured landing page pill (Tiny Desk AI): in the nav on desktop, in the
+   header bar on phones where the nav collapses into the menu. */
+.br-nav .br-feature,
+.br-feature {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 34px;
+  padding: 0 6px 0 14px;
+  border: 1px solid var(--br-orange);
+  border-radius: 999px;
+  background: color-mix(in oklab, var(--br-orange) 14%, transparent);
+  color: var(--br-paper);
+  font-size: 14px;
+  font-weight: 700;
+  text-decoration: none;
+  white-space: nowrap;
+  transition:
+    background 0.2s ease,
+    color 0.2s ease;
+}
+.br-nav .br-feature:hover,
+.br-feature:hover {
+  background: var(--br-orange);
+  color: var(--br-bg);
+}
+.br-feature-badge {
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--br-orange);
+  color: var(--br-bg);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.br-feature:hover .br-feature-badge {
+  background: var(--br-bg);
+  color: var(--br-orange);
+}
+.br-feature-bar {
+  display: none;
+}
+@media (max-width: 820px) {
+  .br-nav .br-feature-nav {
+    display: none;
+  }
+  .br-feature-bar {
+    display: inline-flex;
+  }
+}
+@media (max-width: 380px) {
+  .br-feature-bar .br-feature-badge {
+    display: none;
+  }
+}
+.br-nav a,
+.br-link-quiet {
+  white-space: nowrap;
+}
+/* Mid widths: the pill takes the guide link's room. */
+@media (max-width: 1100px) and (min-width: 821px) {
+  .br-nav .br-nav-desktop {
+    display: none;
+  }
+}

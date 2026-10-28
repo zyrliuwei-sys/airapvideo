@@ -6,6 +6,7 @@ import { BLOG_POST_SLUGS } from '@/content/posts';
 
 const STATIC_PATHS = [
   '',
+  '/tiny-desk-ai',
   '/pricing',
   '/privacy-policy',
   '/terms-of-service',

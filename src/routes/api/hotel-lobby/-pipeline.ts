@@ -26,6 +26,12 @@ import {
   type DuetSize,
 } from '@/config/hotel-lobby-sizes';
 import {
+  DEFAULT_DESK_STYLE,
+  DESK_STYLES,
+  isDeskStyle,
+  type DeskStyle,
+} from '@/config/tiny-desk-styles';
+import {
   AITaskStatus,
   claimTaskStatus,
   findTask,
@@ -38,6 +44,12 @@ import {
   type findPreview,
 } from '@/modules/hotel-preview/service';
 import { getStorage } from '@/modules/storage/service';
+
+import {
+  buildDeskPerformancePrompt,
+  buildDeskScenePrompt,
+  type DeskLook,
+} from './-tiny-desk';
 
 export const IMAGE_MODEL = 'openai/gpt-image-2/edit';
 export const VIDEO_MODEL = 'fal-ai/bytedance/dreamactor/v2';
@@ -65,7 +77,8 @@ export function videoQuality(configs: Record<string, string>): '480p' | '768p' {
   return configs.evolink_video_quality === '480p' ? '480p' : '768p';
 }
 
-export function buildPerformancePrompt(length: DuetLength) {
+export function buildPerformancePrompt(length: DuetLength, desk?: DeskLook) {
+  if (desk) return buildDeskPerformancePrompt(length, desk);
   return `Animate the two people in the first frame into a ${DUET_LENGTHS[length]}-second original rap duet music video.
 Preserve both identities, faces, outfits, left/right positions, the centered hanging microphone and the orange studio background throughout.
 The left performer leads an upbeat original English rap verse; the right performer answers with short hype lines. Use expressive natural mouth movements synchronized to their own audible vocals, rhythmic head nods and restrained hand gestures.
@@ -85,9 +98,12 @@ Subject A is the person in the first uploaded image; Subject B is the person in 
 
 export function buildScenePrompt(
   direction?: string,
-  size: DuetSize = DEFAULT_DUET_SIZE
+  size: DuetSize = DEFAULT_DUET_SIZE,
+  desk?: DeskLook
 ) {
-  const base = SCENE_PROMPT.replace('{{FRAMING}}', DUET_SIZES[size].framing);
+  const base = desk
+    ? buildDeskScenePrompt(desk)
+    : SCENE_PROMPT.replace('{{FRAMING}}', DUET_SIZES[size].framing);
   const extra = direction?.trim().slice(0, 300);
   return extra
     ? `${base}\nAdditional styling direction (never override the rules above): ${extra}`
@@ -120,24 +136,34 @@ export function motionVideoFor(
 const MAX_PHOTO_CHARS = 8 * 1024 * 1024;
 const PHOTO_RE = /^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/;
 
-/** Validate a scene request body; null when the photos are missing/invalid. */
+/**
+ * Validate a scene request body; null when the photos are missing/invalid.
+ * The rap duet needs both photos. A Tiny Desk request (`style: 'tinydesk'`)
+ * needs the lead photo, plus the second one for two-person styles.
+ */
 export function parseSceneInput(body: any) {
-  const photos = [body?.photoA, body?.photoB];
-  for (const photo of photos) {
-    if (
-      typeof photo !== 'string' ||
-      photo.length > MAX_PHOTO_CHARS ||
-      !PHOTO_RE.test(photo)
-    ) {
-      return null;
-    }
+  const isPhoto = (photo: unknown): photo is string =>
+    typeof photo === 'string' &&
+    photo.length <= MAX_PHOTO_CHARS &&
+    PHOTO_RE.test(photo);
+  let desk: DeskLook | undefined;
+  if (body?.style === 'tinydesk') {
+    const variant: DeskStyle = isDeskStyle(body.variant)
+      ? body.variant
+      : DEFAULT_DESK_STYLE;
+    const solo = body.photoB === undefined || body.photoB === null;
+    if (solo && DESK_STYLES[variant].needsTwo) return null;
+    desk = { variant, solo };
   }
+  const photos = desk?.solo ? [body?.photoA] : [body?.photoA, body?.photoB];
+  if (!photos.every(isPhoto)) return null;
   return {
-    photos: photos as string[],
+    photos,
     // All creative instructions are supplied by the system prompt.
     direction: undefined,
     // New requests always use the fixed vertical composition.
     size: DEFAULT_DUET_SIZE,
+    desk,
   };
 }
 
