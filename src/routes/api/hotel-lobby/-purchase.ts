@@ -43,6 +43,7 @@ import {
   videoQuality,
   videoSceneQuality,
 } from './-pipeline';
+import type { ThemeLook } from './-themes';
 import type { DeskLook } from './-tiny-desk';
 
 type PurchaseInput = {
@@ -51,7 +52,9 @@ type PurchaseInput = {
   size: DuetSize;
   length: DuetLength;
   costCredits: number;
-  /** Tiny Desk look; absent for the rap duet */
+  /** Themed look; absent for the rap duet */
+  look?: ThemeLook;
+  /** Purchases saved before themes were generalized (Tiny Desk only) */
   desk?: DeskLook;
 };
 
@@ -179,12 +182,15 @@ async function startPurchase(
     size: DEFAULT_DUET_SIZE,
     length: DEFAULT_DUET_LENGTH,
   };
+  const look: ThemeLook | undefined =
+    input.look ??
+    (input.desk ? { theme: 'tinydesk', ...input.desk } : undefined);
   const provider = duetProvider(configs);
   const initialInfo = {
     emailProvided: !!purchase.email,
     length: input.length,
     quality: videoQuality(configs),
-    videoPrompt: buildPerformancePrompt(input.length, input.desk),
+    videoPrompt: buildPerformancePrompt(input.length, look),
     sceneClaimedAt: Date.now(),
   };
   const task =
@@ -192,7 +198,7 @@ async function startPurchase(
       ? await createD1PaidTask(purchase, {
           provider: provider.name,
           model: PIPELINE_MODEL,
-          prompt: buildScenePrompt(input.direction, input.size, input.desk),
+          prompt: buildScenePrompt(input.direction, input.size, look),
           costCredits: input.costCredits,
           info: initialInfo,
         })
@@ -213,7 +219,7 @@ async function startPurchase(
             mediaType: AIMediaType.VIDEO,
             provider: provider.name,
             model: PIPELINE_MODEL,
-            prompt: buildScenePrompt(input.direction, input.size, input.desk),
+            prompt: buildScenePrompt(input.direction, input.size, look),
             costCredits: input.costCredits,
             tx,
           });

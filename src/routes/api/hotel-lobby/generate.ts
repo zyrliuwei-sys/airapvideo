@@ -54,7 +54,7 @@ async function POST({ request }: { request: Request }) {
     if (isBlockedDirection(input.direction)) {
       return respErr(DIRECTION_BLOCKED);
     }
-    const { photos, direction, size, desk } = input;
+    const { photos, direction, size, look } = input;
 
     const configs = await getAllConfigs();
     if (!(await screenPrompt(direction, configs)).allowed) {
@@ -72,7 +72,7 @@ async function POST({ request }: { request: Request }) {
 
     const provider = duetProvider(configs);
 
-    const prompt = buildScenePrompt(direction, size, desk);
+    const prompt = buildScenePrompt(direction, size, look);
     const task = await createTask({
       userId: actor.userId,
       mediaType: AIMediaType.VIDEO,
@@ -95,7 +95,7 @@ async function POST({ request }: { request: Request }) {
         sceneClaimedAt: Date.now(),
         length,
         quality: videoQuality(configs),
-        videoPrompt: buildPerformancePrompt(length, desk),
+        videoPrompt: buildPerformancePrompt(length, look),
       });
       const imageRequestId = await submitScene(
         provider,

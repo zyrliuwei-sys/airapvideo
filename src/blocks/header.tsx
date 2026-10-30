@@ -36,20 +36,38 @@ export function Header() {
       label: m['rap.nav.guide'](),
       className: 'br-nav-desktop',
     },
-    { href: '/#how', label: m['hotel.nav.how']() },
+    {
+      href: '/#how',
+      label: m['hotel.nav.how'](),
+      className: 'br-nav-wide',
+    },
     { href: '/#pricing', label: m['hotel.nav.pricing']() },
-    { href: '/#faq', label: m['hotel.nav.faq']() },
+    {
+      href: '/#faq',
+      label: m['hotel.nav.faq'](),
+      className: 'br-nav-narrow',
+    },
   ];
 
-  // Featured landing page, shown as a highlighted pill.
-  const feature = (className: string) => (
+  // Featured landing pages, shown as highlighted pills: all of them in the
+  // nav, the first one also in the phone header bar.
+  const features = [
+    {
+      href: '/thriller-dance',
+      label: m['thriller.nav'](),
+      badge: m['thriller.nav_badge'](),
+    },
+    { href: '/tiny-desk-ai', label: m['tinydesk.nav']() },
+  ];
+  const feature = (item: (typeof features)[number], className: string) => (
     <Link
-      href="/tiny-desk-ai"
+      key={item.href}
+      href={item.href}
       className={`br-feature ${className}`}
       onClick={() => setOpen(false)}
     >
-      {m['tinydesk.nav']()}
-      <span className="br-feature-badge">{m['tinydesk.nav_badge']()}</span>
+      {item.label}
+      {item.badge && <span className="br-feature-badge">{item.badge}</span>}
     </Link>
   );
 
@@ -69,7 +87,7 @@ export function Header() {
           className={open ? 'br-nav br-nav-open' : 'br-nav'}
           aria-label={m['hotel.nav_label']()}
         >
-          {feature('br-feature-nav')}
+          {features.map((item) => feature(item, 'br-feature-nav'))}
           {links.map((link) => (
             <a
               key={link.href}
@@ -92,7 +110,7 @@ export function Header() {
         </nav>
         <div className="br-header-actions">
           {/* Phones: the menu is collapsed, so the pill sits in the bar. */}
-          {feature('br-feature-bar')}
+          {feature(features[0], 'br-feature-bar')}
           {user ? (
             <Suspense fallback={<span className="block size-9" />}>
               <SiteUserMenu

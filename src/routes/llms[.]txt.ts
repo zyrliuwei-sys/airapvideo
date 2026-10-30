@@ -12,6 +12,12 @@ const STATIC_PAGES: { path: string; title: string; description: string }[] = [
     description: 'Turn two photos into a lip-synced AI rap music video',
   },
   {
+    path: '/thriller-dance',
+    title: 'Thriller Dance AI Generator',
+    description:
+      'Turn one photo into a video of you leading a Thriller-style zombie dance',
+  },
+  {
     path: '/tiny-desk-ai',
     title: 'Tiny Desk AI Video Generator',
     description:

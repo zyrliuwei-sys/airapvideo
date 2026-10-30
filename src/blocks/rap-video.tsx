@@ -37,6 +37,7 @@ import {
   OFFERED_DUET_SIZES,
   type DuetSize,
 } from '@/config/hotel-lobby-sizes';
+import type { SceneTheme } from '@/config/scene-themes';
 import { apiGet, apiPost } from '@/lib/api-client';
 import { draftDelete, draftGet, draftSet } from '@/lib/draft-store';
 import { track } from '@/lib/track';
@@ -497,8 +498,8 @@ function PhotoInput({
   );
 }
 
-/** Scene look sent to the generator; must match the server's SceneStyle. */
-export type StudioStyle = 'duet' | 'tinydesk';
+/** Scene sent to the generator: the rap duet, or a themed scene. */
+export type StudioStyle = 'duet' | SceneTheme;
 
 /** Hero copy and idle demo clip for a landing page other than the homepage. */
 export type StudioCopy = {

@@ -5,14 +5,14 @@
  */
 
 import { DUET_LENGTHS, type DuetLength } from '@/config/hotel-lobby-pricing';
-import type { DeskStyle } from '@/config/tiny-desk-styles';
+import type { ThemeStyle } from '@/config/scene-themes';
 
 /** Look of a Tiny Desk job, saved with paid purchases until they start. */
-export type DeskLook = { variant: DeskStyle; solo: boolean };
+export type DeskLook = { variant: ThemeStyle<'tinydesk'>; solo: boolean };
 
 const ROOM = `The room is a cramped, cozy office used as a live music venue: tall bookshelves packed with books and vinyl records, plants, framed posters, small trophies and warm string lights, with a cluttered wooden desk in front holding coffee mugs and a small lamp. Warm, natural tungsten light.`;
 
-const SCENES: Record<DeskStyle, { solo: string; duo: string }> = {
+const SCENES: Record<ThemeStyle<'tinydesk'>, { solo: string; duo: string }> = {
   band: {
     solo: `Place Subject A standing as the lead singer behind a single vintage silver microphone, waist-up, centered. Behind and around them, a full band of AI musicians who are clearly not the main subject: a keyboard player at an electric piano on the desk, a backing singer, a bassist and a saxophone player.`,
     duo: `Place Subject A standing on the left as the lead singer behind a single vintage silver microphone. Place Subject B on the right, close beside them, as the backing singer at a second microphone. Behind them, AI band musicians who are clearly not the main subjects: keys on the desk, bass and a saxophone player.`,
@@ -31,7 +31,10 @@ const SCENES: Record<DeskStyle, { solo: string; duo: string }> = {
   },
 };
 
-const PERFORMANCES: Record<DeskStyle, { solo: string; duo: string }> = {
+const PERFORMANCES: Record<
+  ThemeStyle<'tinydesk'>,
+  { solo: string; duo: string }
+> = {
   band: {
     solo: `The lead singer performs joyfully: smiling, laughing between lines, eyes closed on the high notes, one hand raised. The band keeps playing behind them and the saxophone player takes a short solo.`,
     duo: `The left performer is the lead singer: joyful, laughing between lines, eyes closed on the high notes. The right performer sings warm backing harmonies and sways to the groove. The band keeps playing and the saxophone player takes a short solo.`,

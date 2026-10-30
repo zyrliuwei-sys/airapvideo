@@ -1,19 +1,10 @@
-import { Fragment, useState } from 'react';
-import {
-  ArrowRight,
-  Clapperboard,
-  Lamp,
-  Upload,
-  Volume2,
-  VolumeX,
-} from 'lucide-react';
+import { Clapperboard, Lamp, Upload } from 'lucide-react';
 
 import { Link } from '@/core/i18n/navigation';
-import { DESK_STYLES } from '@/config/tiny-desk-styles';
+import { styleNeedsTwo, styleSample } from '@/config/scene-themes';
 import { m } from '@/paraglide/messages.js';
-import { LoopVideo, RapVideoPage } from '@/blocks/rap-video';
-
-import '@/styles/tiny-desk.css';
+import { RapVideoPage } from '@/blocks/rap-video';
+import { ThemeContent, ThemeFaq } from '@/blocks/theme-landing';
 
 // Trend examples (public/videos/tiny-desk/). The duet clip is landscape and
 // spans two columns.
@@ -21,12 +12,7 @@ const desk = (name: string) => ({
   src: `/videos/tiny-desk/${name}.mp4`,
   poster: `/videos/tiny-desk/${name}.jpg`,
 });
-const EXAMPLES: {
-  src: string;
-  poster: string;
-  label: () => string;
-  wide?: boolean;
-}[] = [
+const EXAMPLES = [
   { ...desk('mini-desk'), label: m['tinydesk.examples.clip.band'] },
   { ...desk('outstanding-solo'), label: m['tinydesk.examples.clip.crew'] },
   { ...desk('band-and-sax'), label: m['tinydesk.examples.clip.laugh'] },
@@ -86,112 +72,51 @@ const GUIDE = [
   },
 ];
 
-/** Trend clips; at most one plays with sound at a time. */
-function Examples() {
-  const [voiced, setVoiced] = useState<string | null>(null);
-  return (
-    <section
-      id="examples"
-      className="rv-showcase td-examples"
-      aria-labelledby="examples-heading"
-    >
-      <div className="rv-head">
-        <p className="rv-eyebrow">{m['tinydesk.examples.eyebrow']()}</p>
-        <h2 id="examples-heading">{m['tinydesk.examples.title']()}</h2>
-        <p>{m['tinydesk.examples.description']()}</p>
-      </div>
-      <div className="rv-showcase-grid td-examples-grid">
-        {EXAMPLES.map((item) => (
-          <figure key={item.src} className={item.wide ? 'td-wide' : undefined}>
-            <LoopVideo
-              src={item.src}
-              poster={item.poster}
-              label={item.label()}
-              muted={voiced !== item.src}
-            />
-            <button
-              type="button"
-              className="rv-showcase-sound"
-              aria-pressed={voiced === item.src}
-              aria-label={
-                voiced === item.src
-                  ? m['rap.showcase.sound_off']()
-                  : m['rap.showcase.sound_on']()
-              }
-              onClick={() =>
-                setVoiced((v) => (v === item.src ? null : item.src))
-              }
-            >
-              {voiced === item.src ? (
-                <Volume2 size={16} />
-              ) : (
-                <VolumeX size={16} />
-              )}
-            </button>
-            <figcaption>{item.label()}</figcaption>
-          </figure>
-        ))}
-      </div>
-      <p className="rv-showcase-note">{m['tinydesk.examples.note']()}</p>
-      <div className="rv-actions">
-        <a href="#create" className="br-btn">
-          {m['tinydesk.examples.cta']()} <ArrowRight size={18} />
-        </a>
-      </div>
-    </section>
-  );
-}
-
 function Content() {
   return (
-    <>
-      <Examples />
-
-      <section id="how" className="rv-how">
-        <div className="rv-head">
-          <h2>{m['tinydesk.how.title']()}</h2>
-        </div>
-        <ol className="rv-timeline">
-          <li>
-            <Upload size={22} />
-            <h3>{m['tinydesk.how.one.title']()}</h3>
-            <p>{m['tinydesk.how.one.text']()}</p>
-          </li>
-          <li>
-            <Lamp size={22} />
-            <h3>{m['tinydesk.how.two.title']()}</h3>
-            <p>{m['tinydesk.how.two.text']()}</p>
-          </li>
-          <li>
-            <Clapperboard size={22} />
-            <h3>{m['tinydesk.how.three.title']()}</h3>
-            <p>{m['tinydesk.how.three.text']()}</p>
-          </li>
-        </ol>
-      </section>
-
-      <section id="guide" className="rv-guide">
-        <div className="rv-guide-aside">
-          <p className="rv-eyebrow">{m['tinydesk.guide.eyebrow']()}</p>
-          <h2>{m['tinydesk.guide.title']()}</h2>
-          <nav aria-label={m['tinydesk.guide.toc']()}>
-            {GUIDE.map((part) => (
-              <a key={part.id} href={`#${part.id}`}>
-                {part.title()}
-              </a>
-            ))}
-          </nav>
-        </div>
-        <article className="rv-guide-body">
-          {GUIDE.map((part) => (
-            <Fragment key={part.id}>
-              <h3 id={part.id}>{part.title()}</h3>
-              {part.body.map((paragraph, i) => (
-                <p key={i}>{paragraph()}</p>
-              ))}
-            </Fragment>
-          ))}
-          <p className="rv-guide-more">
+    <ThemeContent
+      examples={{
+        eyebrow: m['tinydesk.examples.eyebrow'](),
+        title: m['tinydesk.examples.title'](),
+        description: m['tinydesk.examples.description'](),
+        note: m['tinydesk.examples.note'](),
+        cta: m['tinydesk.examples.cta'](),
+        clips: EXAMPLES.map(({ label, ...clip }) => ({
+          ...clip,
+          label: label(),
+        })),
+      }}
+      how={{
+        title: m['tinydesk.how.title'](),
+        steps: [
+          {
+            icon: Upload,
+            title: m['tinydesk.how.one.title'](),
+            text: m['tinydesk.how.one.text'](),
+          },
+          {
+            icon: Lamp,
+            title: m['tinydesk.how.two.title'](),
+            text: m['tinydesk.how.two.text'](),
+          },
+          {
+            icon: Clapperboard,
+            title: m['tinydesk.how.three.title'](),
+            text: m['tinydesk.how.three.text'](),
+          },
+        ],
+      }}
+      guide={{
+        eyebrow: m['tinydesk.guide.eyebrow'](),
+        title: m['tinydesk.guide.title'](),
+        toc: m['tinydesk.guide.toc'](),
+        parts: GUIDE.map((part) => ({
+          id: part.id,
+          title: part.title(),
+          body: part.body.map((paragraph) => paragraph()),
+        })),
+        more: (
+          <>
             {m['tinydesk.guide.more']()}{' '}
             <Link href="/blog/best-photos-for-ai-rap-video">
               {m['tinydesk.guide.link_photos']()}
@@ -201,29 +126,20 @@ function Content() {
               {m['tinydesk.guide.link_trend']()}
             </Link>
             .
-          </p>
-        </article>
-      </section>
-    </>
+          </>
+        ),
+      }}
+    />
   );
 }
 
 function Faq() {
   return (
-    <section id="faq" className="rv-faq" aria-labelledby="faq-heading">
-      <div className="rv-head">
-        <p className="rv-eyebrow">{m['tinydesk.faq.eyebrow']()}</p>
-        <h2 id="faq-heading">{m['tinydesk.faq.title']()}</h2>
-      </div>
-      <div className="rv-faq-list">
-        {TINY_DESK_FAQ.map(([question, answer], item) => (
-          <details key={item}>
-            <summary>{question()}</summary>
-            <p>{answer()}</p>
-          </details>
-        ))}
-      </div>
-    </section>
+    <ThemeFaq
+      eyebrow={m['tinydesk.faq.eyebrow']()}
+      title={m['tinydesk.faq.title']()}
+      items={[...TINY_DESK_FAQ]}
+    />
   );
 }
 
@@ -259,8 +175,8 @@ export function TinyDeskPage() {
           ).map(([id, label]) => ({
             id,
             label: label(),
-            ...desk(DESK_STYLES[id].sample),
-            needsTwo: DESK_STYLES[id].needsTwo,
+            ...styleSample('tinydesk', id),
+            needsTwo: styleNeedsTwo('tinydesk', id),
           })),
         },
         cta: m['tinydesk.hero.cta'](),
