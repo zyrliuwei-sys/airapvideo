@@ -50,24 +50,32 @@ export function Header() {
   ];
 
   // Featured landing pages, shown as highlighted pills: all of them in the
-  // nav, the first one also in the phone header bar.
+  // nav, the first one also in the phone header bar (short label, no badge,
+  // so it fits beside the logo, avatar and menu button).
   const features = [
     {
       href: '/thriller-dance',
       label: m['thriller.nav'](),
+      short: m['thriller.nav_short'](),
       badge: m['thriller.nav_badge'](),
     },
-    { href: '/tiny-desk-ai', label: m['tinydesk.nav']() },
+    {
+      href: '/tiny-desk-ai',
+      label: m['tinydesk.nav'](),
+      short: m['tinydesk.nav'](),
+    },
   ];
-  const feature = (item: (typeof features)[number], className: string) => (
+  const feature = (item: (typeof features)[number], bar = false) => (
     <Link
       key={item.href}
       href={item.href}
-      className={`br-feature ${className}`}
+      className={`br-feature ${bar ? 'br-feature-bar' : 'br-feature-nav'}`}
       onClick={() => setOpen(false)}
     >
-      {item.label}
-      {item.badge && <span className="br-feature-badge">{item.badge}</span>}
+      {bar ? item.short : item.label}
+      {!bar && item.badge && (
+        <span className="br-feature-badge">{item.badge}</span>
+      )}
     </Link>
   );
 
@@ -87,7 +95,7 @@ export function Header() {
           className={open ? 'br-nav br-nav-open' : 'br-nav'}
           aria-label={m['hotel.nav_label']()}
         >
-          {features.map((item) => feature(item, 'br-feature-nav'))}
+          {features.map((item) => feature(item))}
           {links.map((link) => (
             <a
               key={link.href}
@@ -110,7 +118,7 @@ export function Header() {
         </nav>
         <div className="br-header-actions">
           {/* Phones: the menu is collapsed, so the pill sits in the bar. */}
-          {feature(features[0], 'br-feature-bar')}
+          {feature(features[0], true)}
           {user ? (
             <Suspense fallback={<span className="block size-9" />}>
               <SiteUserMenu

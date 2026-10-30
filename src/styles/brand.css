@@ -446,8 +446,19 @@
     display: inline-flex;
   }
 }
-@media (max-width: 380px) {
-  .br-feature-bar .br-feature-badge {
+@media (max-width: 640px) {
+  .br-header-actions {
+    gap: 10px;
+  }
+  .br-feature-bar {
+    min-height: 32px;
+    padding: 0 12px;
+    font-size: 13px;
+  }
+}
+/* Smallest phones: the logo alone, so the pill, avatar and menu fit. */
+@media (max-width: 360px) {
+  .br-brand span {
     display: none;
   }
 }

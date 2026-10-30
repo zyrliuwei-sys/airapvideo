@@ -44,7 +44,9 @@ export class EvolinkProvider implements AIProvider {
         ...init?.headers,
       },
       signal: AbortSignal.timeout(60_000),
-      redirect: 'error',
+      // Never follow a redirect (it would resend the bearer token). Workers
+      // reject `redirect: 'error'`, so take the 3xx and fail on !ok below.
+      redirect: 'manual',
     });
     if (!response.ok) throw new EvolinkRequestError(response.status);
     try {
