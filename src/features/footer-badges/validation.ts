@@ -1,6 +1,19 @@
 import { MAX_FOOTER_BADGES, type FooterBadge } from './types';
 
 const MAX_ALT_LENGTH = 120;
+const LINK_REL = new Set(['nofollow', 'sponsored', 'ugc']);
+
+export function normalizeFooterBadgeRel(value: unknown): string {
+  const tokens =
+    typeof value === 'string' ? value.toLowerCase().split(/\s+/) : [];
+  return [
+    ...new Set([
+      'noopener',
+      'noreferrer',
+      ...tokens.filter((token) => LINK_REL.has(token)),
+    ]),
+  ].join(' ');
+}
 
 function safeHttpsUrl(value: unknown, field: string): string {
   if (typeof value !== 'string' || value.length > 2048) {
@@ -51,7 +64,10 @@ export function validateFooterBadges(value: unknown): FooterBadge[] {
 
     const badge = item as Record<string, unknown>;
     const href = safeHttpsUrl(badge.href, `Badge ${index + 1} link`);
-    const src = safeHttpsUrl(badge.src, `Badge ${index + 1} image`);
+    const src =
+      badge.src === undefined
+        ? undefined
+        : safeHttpsUrl(badge.src, `Badge ${index + 1} image`);
     const alt = typeof badge.alt === 'string' ? badge.alt.trim() : '';
 
     if (!alt || alt.length > MAX_ALT_LENGTH) {
@@ -64,6 +80,7 @@ export function validateFooterBadges(value: unknown): FooterBadge[] {
       href,
       src,
       alt,
+      rel: normalizeFooterBadgeRel(badge.rel),
       width: optionalDimension(badge.width, `Badge ${index + 1} width`, 1000),
       height: optionalDimension(badge.height, `Badge ${index + 1} height`, 600),
     };

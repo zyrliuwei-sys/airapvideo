@@ -1,4 +1,5 @@
 import type { CSSProperties } from 'react';
+import { getRouteApi } from '@tanstack/react-router';
 import { DEFAULT_FOOTER_BADGES } from '@/features/footer-badges/defaults';
 import type { FooterBadge } from '@/features/footer-badges/types';
 import { parseStoredFooterBadges } from '@/features/footer-badges/validation';
@@ -30,19 +31,23 @@ function BadgeRow({
           <a
             href={badge.href}
             target="_blank"
-            rel="noopener noreferrer"
+            rel={badge.rel ?? 'noopener noreferrer'}
             tabIndex={hidden ? -1 : undefined}
             className="flex h-12 items-center transition-opacity hover:opacity-80"
           >
-            <img
-              src={badge.src}
-              alt={hidden ? '' : badge.alt}
-              width={badge.width ?? 250}
-              height={badge.height}
-              loading="lazy"
-              draggable={false}
-              className="h-full w-auto max-w-[260px] object-contain"
-            />
+            {badge.src ? (
+              <img
+                src={badge.src}
+                alt={hidden ? '' : badge.alt}
+                width={badge.width ?? 250}
+                height={badge.height}
+                loading="lazy"
+                draggable={false}
+                className="h-full w-auto max-w-[260px] object-contain"
+              />
+            ) : (
+              <span className="px-3 text-sm font-medium">{badge.alt}</span>
+            )}
           </a>
         </li>
       ))}
@@ -50,12 +55,19 @@ function BadgeRow({
   );
 }
 
+const rootRoute = getRouteApi('__root__');
+
 export function FooterBadgeList({ className }: { className?: string }) {
   const { data } = usePublicConfig();
+  // Include badges in the initial HTML for directory verifiers without JavaScript.
+  const ssrStored = rootRoute.useLoaderData({
+    select: (data) => data.footerBadges,
+  });
+  const stored = data ? data.footer_badges : (ssrStored ?? undefined);
   const badges =
-    data?.footer_badges === undefined
+    stored === undefined
       ? DEFAULT_FOOTER_BADGES
-      : parseStoredFooterBadges(data.footer_badges);
+      : parseStoredFooterBadges(stored);
 
   if (badges.length === 0) return null;
 

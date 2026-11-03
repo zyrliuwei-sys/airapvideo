@@ -1,0 +1,63 @@
+[
+  {
+    "name": "presentation attributes and wrapper",
+    "markup": "<div class=\"badge\"><a href=\"https://example.com/\" class=\"link\"><img src=\"https://example.com/badge.svg\" style=\"height:40px;width:148px\" alt=\"Example\"></a></div>",
+    "accept": true,
+    "expected": {
+      "width": 148,
+      "height": 40
+    }
+  },
+  {
+    "name": "text and qualified rel",
+    "markup": "<a href=\"https://example.com/\" rel=\"nofollow sponsored\"><span>Featured on Example</span></a>",
+    "accept": true,
+    "expected": {
+      "rel": "noopener noreferrer nofollow sponsored",
+      "alt": "Featured on Example"
+    }
+  },
+  {
+    "name": "head script",
+    "markup": "<script>alert(1)</script><a href=\"https://example.com\">Example</a>",
+    "accept": false
+  },
+  {
+    "name": "event handler",
+    "markup": "<a href=\"https://example.com\"><img src=\"https://example.com/a.svg\" onerror=\"alert(1)\"></a>",
+    "accept": false
+  },
+  {
+    "name": "javascript link",
+    "markup": "<a href=\"javascript:alert(1)\">Example</a>",
+    "accept": false
+  },
+  {
+    "name": "inline SVG",
+    "markup": "<a href=\"https://example.com\"><svg></svg></a>",
+    "accept": false
+  },
+  {
+    "name": "data image",
+    "markup": "<a href=\"https://example.com\"><img src=\"data:image/svg+xml,test\" alt=\"A\"></a>",
+    "accept": false
+  },
+  {
+    "name": "relative URL",
+    "markup": "<a href=\"/relative\">Example</a>",
+    "accept": false
+  },
+  {
+    "name": "oversized width",
+    "markup": "<a href=\"https://example.com\"><img src=\"https://example.com/a.svg\" width=\"99999\" alt=\"A\"></a>",
+    "accept": false
+  },
+  {
+    "name": "missing image alt",
+    "markup": "<a href=\"https://example.com\"><img src=\"https://example.com/a.svg\"></a>",
+    "accept": true,
+    "expected": {
+      "alt": "example.com"
+    }
+  }
+]

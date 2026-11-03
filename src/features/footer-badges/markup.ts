@@ -1,73 +1,74 @@
 import type { FooterBadge } from './types';
 import { validateFooterBadges } from './validation';
 
-const ANCHOR_ATTRIBUTES = new Set(['href', 'target', 'rel']);
-const IMAGE_ATTRIBUTES = new Set(['src', 'alt', 'width', 'height', 'loading']);
+const SAFE_ELEMENTS = new Set([
+  'A',
+  'IMG',
+  'DIV',
+  'SPAN',
+  'P',
+  'FIGURE',
+  'STRONG',
+  'EM',
+  'SMALL',
+  'B',
+  'I',
+  'BR',
+]);
 
-function hasOnlyAllowedAttributes(element: Element, allowed: Set<string>) {
-  return Array.from(element.attributes).every((attribute) =>
-    allowed.has(attribute.name.toLowerCase())
-  );
+function dimension(image: Element, name: 'width' | 'height') {
+  const attribute = image.getAttribute(name);
+  if (attribute !== null) return Number(attribute);
+  // Read pixel dimensions only. Never render the supplied stylesheet or attributes.
+  const match = image
+    .getAttribute('style')
+    ?.match(new RegExp(`(?:^|;)\\s*${name}\\s*:\\s*(\\d+)px\\s*(?:;|$)`, 'i'));
+  return match ? Number(match[1]) : undefined;
 }
 
-function hasOnlyWhitespaceText(element: Element) {
-  return Array.from(element.childNodes).every(
-    (node) => node.nodeType === Node.ELEMENT_NODE || !node.textContent?.trim()
-  );
-}
-
-/**
- * Extract safe link/image data from pasted badge snippets without rendering
- * submitted HTML. Only <a><img></a> markup and a small attribute allowlist are
- * accepted; the server validates the extracted values again before saving.
- */
+/** Extract data from ordinary directory badges; pasted HTML is never rendered. */
 export function parseFooterBadgeMarkup(markup: string): FooterBadge[] {
-  if (!markup.trim() || markup.length > 20_000) {
+  if (!markup.trim() || markup.length > 20_000)
     throw new Error('invalid_markup');
-  }
-
   const doc = new DOMParser().parseFromString(markup, 'text/html');
-  const elements = Array.from(doc.body.children);
-  if (
-    elements.length === 0 ||
-    !hasOnlyWhitespaceText(doc.body) ||
-    elements.some((element) => element.tagName !== 'A')
-  ) {
-    throw new Error('invalid_markup');
-  }
-
-  const badges = elements.map((anchor) => {
+  // DOMParser can move script/style/link tags into <head>; inspect both trees.
+  if (doc.head.children.length) throw new Error('invalid_markup');
+  for (const element of Array.from(doc.body.querySelectorAll('*'))) {
     if (
-      !hasOnlyAllowedAttributes(anchor, ANCHOR_ATTRIBUTES) ||
-      (anchor.getAttribute('target') &&
-        anchor.getAttribute('target') !== '_blank') ||
-      !hasOnlyWhitespaceText(anchor)
+      !SAFE_ELEMENTS.has(element.tagName) ||
+      Array.from(element.attributes).some((attribute) =>
+        /^on/i.test(attribute.name)
+      )
     ) {
       throw new Error('invalid_markup');
     }
-
-    const children = Array.from(anchor.children);
-    if (children.length !== 1 || children[0]?.tagName !== 'IMG') {
+    if (element.tagName === 'IMG' && !element.closest('a[href]')) {
       throw new Error('invalid_markup');
     }
+  }
 
-    const image = children[0];
-    if (!hasOnlyAllowedAttributes(image, IMAGE_ATTRIBUTES)) {
-      throw new Error('invalid_markup');
-    }
-
+  const anchors = Array.from(doc.body.querySelectorAll('a[href]'));
+  if (!anchors.length) throw new Error('invalid_markup');
+  const badges = anchors.map((anchor) => {
+    const images = Array.from(anchor.querySelectorAll('img'));
+    if (images.length > 1) throw new Error('invalid_markup');
+    const image = images[0];
+    const href = anchor.getAttribute('href') ?? '';
+    const text = anchor.textContent?.replace(/\s+/g, ' ').trim();
+    const alt =
+      image?.getAttribute('alt')?.trim() ||
+      anchor.getAttribute('aria-label')?.trim() ||
+      text ||
+      anchor.getAttribute('title')?.trim() ||
+      (image ? new URL(href).hostname : '');
     return {
-      href: anchor.getAttribute('href') ?? '',
-      src: image.getAttribute('src') ?? '',
-      alt: image.getAttribute('alt') ?? '',
-      width: image.hasAttribute('width')
-        ? Number(image.getAttribute('width'))
-        : 250,
-      height: image.hasAttribute('height')
-        ? Number(image.getAttribute('height'))
-        : undefined,
+      href,
+      ...(image ? { src: image.getAttribute('src') ?? '' } : {}),
+      alt,
+      rel: anchor.getAttribute('rel') ?? undefined,
+      width: image ? dimension(image, 'width') : undefined,
+      height: image ? dimension(image, 'height') : undefined,
     };
   });
-
   return validateFooterBadges(badges);
 }

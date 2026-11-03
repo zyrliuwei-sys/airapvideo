@@ -1,7 +1,8 @@
 export interface FooterBadge {
   href: string;
-  src: string;
+  src?: string;
   alt: string;
+  rel?: string;
   width?: number;
   height?: number;
 }
