@@ -63,16 +63,8 @@
   background: var(--br-orange);
   border-radius: 50%;
 }
-.rd-breadcrumb {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding-top: 27px;
-  font-size: 12px;
-  color: var(--br-smoke);
-}
-.rd-breadcrumb a {
-  text-decoration: underline;
+.rd-hero > .site-breadcrumb {
+  padding-top: 20px;
 }
 .rd-hero-grid {
   display: grid;

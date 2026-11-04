@@ -145,6 +145,7 @@ export function ThrillerDancePage() {
   return (
     <RapVideoPage
       style="thriller"
+      breadcrumb={m['thriller.nav']()}
       copy={{
         eyebrow: m['thriller.hero.eyebrow'](),
         title: m['thriller.hero.title'](),

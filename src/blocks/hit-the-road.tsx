@@ -3,7 +3,6 @@ import {
   ArrowRight,
   ArrowUpRight,
   Camera,
-  ChevronRight,
   Route as RoadIcon,
 } from 'lucide-react';
 
@@ -17,6 +16,7 @@ import {
 import { m } from '@/paraglide/messages.js';
 import { Footer } from '@/blocks/footer';
 import { Header } from '@/blocks/header';
+import { SiteBreadcrumb } from '@/components/site-breadcrumb';
 import { TrendPrompt } from '@/components/trend-prompt';
 import { TrendVideo } from '@/components/trend-video';
 
@@ -48,11 +48,11 @@ export function HitTheRoadPage() {
       <Header />
       <main>
         <section className="rd-hero rd-wrap">
-          <nav className="rd-breadcrumb" aria-label={m['road.breadcrumb']()}>
-            <Link href="/">{m['road.home']()}</Link>
-            <ChevronRight size={12} aria-hidden="true" />
-            <span>{m['road.nav']()}</span>
-          </nav>
+          <SiteBreadcrumb
+            label={m['common.nav.breadcrumb']()}
+            homeLabel={m['common.nav.home']()}
+            currentPage={m['road.nav']()}
+          />
           <div className="rd-hero-grid">
             <div className="rd-hero-copy">
               <p className="rd-eyebrow">

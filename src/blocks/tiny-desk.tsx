@@ -148,6 +148,7 @@ export function TinyDeskPage() {
   return (
     <RapVideoPage
       style="tinydesk"
+      breadcrumb={m['tinydesk.nav']()}
       copy={{
         eyebrow: m['tinydesk.hero.eyebrow'](),
         title: m['tinydesk.hero.title'](),

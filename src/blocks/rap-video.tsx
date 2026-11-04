@@ -49,6 +49,7 @@ import { Guides } from '@/blocks/guides';
 import { Header } from '@/blocks/header';
 import { PhoneUpload } from '@/blocks/phone-upload';
 import { Pricing } from '@/blocks/pricing';
+import { SiteBreadcrumb } from '@/components/site-breadcrumb';
 
 import '@/styles/rap-video.css';
 
@@ -547,11 +548,13 @@ export type StudioCopy = {
 export function RapVideoPage({
   style = 'duet',
   copy,
+  breadcrumb,
   content,
   afterPricing,
 }: {
   style?: StudioStyle;
   copy?: StudioCopy;
+  breadcrumb?: string;
   content?: ReactNode;
   afterPricing?: ReactNode;
 } = {}) {
@@ -876,7 +879,17 @@ export function RapVideoPage({
 
       <main>
         {/* Hero and generator in one place: visitors land on the upload. */}
-        <section id="create" className="rv-hero">
+        <section
+          id="create"
+          className={breadcrumb ? 'rv-hero rv-hero-with-breadcrumb' : 'rv-hero'}
+        >
+          {breadcrumb && (
+            <SiteBreadcrumb
+              label={m['common.nav.breadcrumb']()}
+              homeLabel={m['common.nav.home']()}
+              currentPage={breadcrumb}
+            />
+          )}
           <div className="rv-hero-copy">
             <p className="rv-eyebrow">
               {copy ? copy.eyebrow : m['rap.hero.eyebrow']()}

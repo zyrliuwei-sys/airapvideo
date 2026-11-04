@@ -65,6 +65,13 @@
     ),
     var(--br-bg);
 }
+.rv-hero.rv-hero-with-breadcrumb {
+  padding-top: 20px;
+}
+.rv-hero > .site-breadcrumb {
+  max-width: 1080px;
+  margin: 0 auto 24px;
+}
 .rv-hero-copy {
   max-width: 1080px;
   margin: 0 auto 32px;
