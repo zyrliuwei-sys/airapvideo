@@ -2,10 +2,11 @@ import { lazy, Suspense, useEffect, useState } from 'react';
 import { Menu, X } from 'lucide-react';
 
 import { useSession } from '@/core/auth/client';
-import { Link } from '@/core/i18n/navigation';
+import { Link, usePathname } from '@/core/i18n/navigation';
 import { envConfigs } from '@/config';
 import { m } from '@/paraglide/messages.js';
 import { localizeHref } from '@/paraglide/runtime.js';
+import { TrendingVideosMenu } from '@/components/trending-videos-menu';
 
 import '@/styles/brand.css';
 
@@ -20,6 +21,7 @@ const SiteUserMenu = lazy(() =>
 /** Brand header shared by the homepage and every inner page. */
 export function Header() {
   const [open, setOpen] = useState(false);
+  const pathname = usePathname();
   const { data: session } = useSession();
   // The session is only known in the browser: render the signed-out state
   // for SSR and the first client render, then switch, so hydration matches.
@@ -49,35 +51,29 @@ export function Header() {
     },
   ];
 
-  // Featured landing pages, shown as highlighted pills: all of them in the
-  // nav, the first one also in the phone header bar (short label, no badge,
-  // so it fits beside the logo, avatar and menu button).
+  // A single discovery menu stays visible in the header at every width.
   const features = [
     {
       href: '/thriller-dance',
       label: m['thriller.nav'](),
-      short: m['thriller.nav_short'](),
+      description: m['header.trending.thriller'](),
+      poster: '/videos/thriller/zombie-street.jpg',
       badge: m['thriller.nav_badge'](),
     },
     {
       href: '/tiny-desk-ai',
       label: m['tinydesk.nav'](),
-      short: m['tinydesk.nav'](),
+      description: m['header.trending.tinydesk'](),
+      poster: '/videos/tiny-desk/mini-desk.jpg',
+    },
+    {
+      href: '/hit-the-road-dude-ai',
+      label: m['road.nav'](),
+      description: m['header.trending.road'](),
+      poster: '/videos/hit-the-road-dude/cat.jpg',
+      badge: m['header.trending.new'](),
     },
   ];
-  const feature = (item: (typeof features)[number], bar = false) => (
-    <Link
-      key={item.href}
-      href={item.href}
-      className={`br-feature ${bar ? 'br-feature-bar' : 'br-feature-nav'}`}
-      onClick={() => setOpen(false)}
-    >
-      {bar ? item.short : item.label}
-      {!bar && item.badge && (
-        <span className="br-feature-badge">{item.badge}</span>
-      )}
-    </Link>
-  );
 
   return (
     <header className="br-header">
@@ -91,11 +87,20 @@ export function Header() {
           />
           <span>{envConfigs.app_name}</span>
         </Link>
+        <TrendingVideosMenu
+          label={m['header.trending.label']()}
+          shortLabel={m['header.trending.short']()}
+          heading={m['header.trending.heading']()}
+          description={m['header.trending.description']()}
+          items={features}
+          currentPath={pathname}
+          onOpen={() => setOpen(false)}
+          onNavigate={() => setOpen(false)}
+        />
         <nav
           className={open ? 'br-nav br-nav-open' : 'br-nav'}
           aria-label={m['hotel.nav_label']()}
         >
-          {features.map((item) => feature(item))}
           {links.map((link) => (
             <a
               key={link.href}
@@ -117,8 +122,6 @@ export function Header() {
           )}
         </nav>
         <div className="br-header-actions">
-          {/* Phones: the menu is collapsed, so the pill sits in the bar. */}
-          {feature(features[0], true)}
           {user ? (
             <Suspense fallback={<span className="block size-9" />}>
               <SiteUserMenu

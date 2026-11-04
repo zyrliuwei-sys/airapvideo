@@ -60,6 +60,38 @@
   font-size: 15px;
   font-weight: 600;
 }
+.rv-guides-more {
+  max-width: 1240px;
+  margin: 32px auto 0;
+  padding-top: 24px;
+  border-top: 1px solid var(--br-line);
+}
+.rv-guides-more h3 {
+  margin: 0 0 18px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--br-brass);
+}
+.rv-guides-more ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px 30px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.rv-guides-more a {
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+  color: var(--br-smoke);
+  font-size: 13px;
+  text-underline-offset: 4px;
+}
+.rv-guides-more a:hover {
+  color: var(--br-orange);
+  text-decoration: underline;
+}
 @media (prefers-reduced-motion: reduce) {
   .rv-guide-card {
     transition: none;

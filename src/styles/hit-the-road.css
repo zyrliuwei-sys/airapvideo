@@ -492,10 +492,10 @@
 .rd-tips > h3 {
   margin: 6px 0 0;
 }
-.rd-page details {
+.rd-page main details {
   border-bottom: 1px solid var(--rd-line);
 }
-.rd-page summary {
+.rd-page main summary {
   list-style: none;
   display: flex;
   align-items: center;
@@ -506,26 +506,26 @@
   font-weight: 700;
   padding: 21px 0;
 }
-.rd-page summary::-webkit-details-marker {
+.rd-page main summary::-webkit-details-marker {
   display: none;
 }
-.rd-page summary > span {
+.rd-page main summary > span {
   font: 22px/1 monospace;
   flex-shrink: 0;
   transition: transform 0.2s;
 }
-.rd-page details[open] summary > span {
+.rd-page main details[open] summary > span {
   transform: rotate(45deg);
 }
-.rd-page details > p {
+.rd-page main details > p {
   font-size: 13px;
   color: var(--rd-muted);
   margin: 0 0 22px;
 }
-.rd-tips details {
+.rd-page main .rd-tips details {
   border-color: #57594c;
 }
-.rd-tips details > p {
+.rd-page main .rd-tips details > p {
   color: #bdc1b2;
 }
 .rd-faq {

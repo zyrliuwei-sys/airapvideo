@@ -37,6 +37,30 @@ export function Guides() {
           </Link>
         ))}
       </div>
+      <nav className="rv-guides-more" aria-labelledby="more-guides-heading">
+        <h3 id="more-guides-heading">{m['guides.more.title']()}</h3>
+        <ul>
+          {(
+            [
+              ['ai-rap-video-ideas', m['guides.more.ideas']],
+              ['birthday-rap-video-with-ai', m['guides.more.birthday']],
+              ['how-ai-rap-videos-work', m['guides.more.how']],
+              [
+                'make-a-rap-music-video-without-filming',
+                m['guides.more.without_filming'],
+              ],
+              ['ai-rap-video-generator-cost', m['guides.more.cost']],
+            ] as const
+          ).map(([slug, label]) => (
+            <li key={slug}>
+              <Link href={`/blog/${slug}`}>
+                {label()}
+                <ArrowRight size={14} aria-hidden="true" />
+              </Link>
+            </li>
+          ))}
+        </ul>
+      </nav>
     </section>
   );
 }
