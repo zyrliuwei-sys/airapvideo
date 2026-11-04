@@ -8,6 +8,7 @@ const STATIC_PATHS = [
   '',
   '/thriller-dance',
   '/tiny-desk-ai',
+  '/hit-the-road-dude-ai',
   '/pricing',
   '/privacy-policy',
   '/terms-of-service',

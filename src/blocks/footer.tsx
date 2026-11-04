@@ -36,6 +36,7 @@ export function Footer() {
               {m['hotel.nav.how']()}
             </a>
             <Link href="/videos">{m['hotel.create.my_videos']()}</Link>
+            <Link href="/hit-the-road-dude-ai">{m['road.nav']()}</Link>
           </div>
           <div className="br-footer-col">
             <h2>{m['rap.footer.company']()}</h2>

@@ -47,6 +47,7 @@ import { useUserPermissions } from '@/hooks/use-user-permissions';
 import { Footer } from '@/blocks/footer';
 import { Guides } from '@/blocks/guides';
 import { Header } from '@/blocks/header';
+import { HitTheRoadTeaser } from '@/blocks/hit-the-road-teaser';
 import { PhoneUpload } from '@/blocks/phone-upload';
 import { Pricing } from '@/blocks/pricing';
 
@@ -219,7 +220,7 @@ function Showcase() {
               label={item.label()}
               muted={voiced !== item.src}
             />
-            {item.audio && (
+            {'audio' in item && item.audio && (
               <button
                 type="button"
                 className="rv-showcase-sound"
@@ -1467,6 +1468,7 @@ export function RapVideoPage({
               </div>
             </section>
 
+            <HitTheRoadTeaser />
             <Guides />
           </>
         )}
